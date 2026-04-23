@@ -309,38 +309,50 @@ const getFallbackPrice = (ticker) => FALLBACK_PRICES[ticker?.toUpperCase()] || 1
 
 async function fetchLivePrice(ticker) {
   const t = ticker.toUpperCase();
-  // Try Yahoo Finance via a CORS-friendly proxy
-  try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`;
-    const proxied = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxied);
-    if (!res.ok) throw new Error('yahoo bad');
-    const data = await res.json();
-    const r = data?.chart?.result?.[0];
-    const price = r?.meta?.regularMarketPrice;
-    const prevClose = r?.meta?.chartPreviousClose || r?.meta?.previousClose;
-    if (typeof price === 'number') {
-      const change = prevClose ? price - prevClose : 0;
-      const changePct = prevClose ? (change / prevClose) * 100 : 0;
-      return { price, name: r?.meta?.symbol || t, change, changePct, live: true };
-    }
-    throw new Error('no price');
-  } catch (e) {
-    return { price: getFallbackPrice(t), name: t, change: 0, changePct: 0, live: false };
+  const yahoo = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?interval=1d&range=1d`;
+  // Try multiple CORS proxies in sequence
+  const proxies = [
+    (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+  for (const makeUrl of proxies) {
+    try {
+      const res = await fetch(makeUrl(yahoo));
+      if (!res.ok) continue;
+      const data = await res.json();
+      const r = data && data.chart && data.chart.result && data.chart.result[0];
+      const price = r && r.meta && r.meta.regularMarketPrice;
+      const prevClose = r && r.meta && (r.meta.chartPreviousClose || r.meta.previousClose);
+      if (typeof price === 'number') {
+        const change = prevClose ? price - prevClose : 0;
+        const changePct = prevClose ? (change / prevClose) * 100 : 0;
+        return { price, name: (r.meta && r.meta.symbol) || t, change, changePct, live: true };
+      }
+    } catch (e) { /* try next proxy */ }
   }
+  return { price: getFallbackPrice(t), name: t, change: 0, changePct: 0, live: false };
 }
 
 // Fetch USD/GBP rate, fallback ~0.79 (approx Apr 2026 level)
 async function fetchFxRate(base, quote) {
   if (base === quote) return 1;
-  try {
-    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${base}&symbols=${quote}`);
-    if (!res.ok) throw new Error('bad');
-    const data = await res.json();
-    return data?.rates?.[quote] || (base === 'USD' && quote === 'GBP' ? 0.79 : 1 / 0.79);
-  } catch {
-    return base === 'USD' && quote === 'GBP' ? 0.79 : 1 / 0.79;
+  const url = `https://api.frankfurter.dev/v1/latest?base=${base}&symbols=${quote}`;
+  const proxies = [
+    (u) => u, // frankfurter allows CORS directly
+    (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+  for (const makeUrl of proxies) {
+    try {
+      const res = await fetch(makeUrl(url));
+      if (!res.ok) continue;
+      const data = await res.json();
+      const rate = data && data.rates && data.rates[quote];
+      if (typeof rate === 'number') return rate;
+    } catch (e) { /* try next */ }
   }
+  return base === 'USD' && quote === 'GBP' ? 0.79 : 1 / 0.79;
 }
 
 const CURRENCIES = {
@@ -607,7 +619,7 @@ function PortfolioTerminal() {
       </div>
 
       <div style={{ padding: '16px 20px', borderTop: `1px solid ${S.border}`, color: S.textFaint, fontSize: '10px', letterSpacing: '0.15em', textAlign: 'center' }}>
-        ALPHA TERMINAL · LIVE QUOTES VIA STOCKPRICES.DEV · 13F DATA Q4'25/Q1'26 · OUTLOOKS: BLACKROCK · MORGAN STANLEY · JPM · FIDELITY · ISHARES<br />
+        ALPHA TERMINAL · LIVE QUOTES VIA YAHOO FINANCE (via CORS proxy) · 13F DATA Q4'25/Q1'26 · OUTLOOKS: BLACKROCK · MORGAN STANLEY · JPM · FIDELITY · ISHARES<br />
         <span style={{ color: S.amber, marginTop: '6px', display: 'inline-block' }}>EDUCATIONAL USE ONLY · NOT INVESTMENT ADVICE · BETA/VOL ESTIMATES ARE ILLUSTRATIVE · DYOR</span>
       </div>
 
