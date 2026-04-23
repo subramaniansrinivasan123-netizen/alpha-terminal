@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Alpha Terminal — Portfolio Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0a0e14; min-height: 100vh; color: #e6edf3; }
+  body { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; -webkit-font-smoothing: antialiased; }
+  #root { min-height: 100vh; }
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  button:focus, input:focus { outline: 1px solid #c9a961; outline-offset: 0px; }
+  #loading { color: #7d8b9c; font-size: 13px; letter-spacing: 0.25em; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: "JetBrains Mono", monospace; }
+  #loading .dot { width: 8px; height: 8px; background: #c9a961; margin: 0 4px; display: inline-block; animation: pulse 1.2s infinite ease-in-out; }
+  #loading .dot:nth-child(2) { animation-delay: 0.15s; }
+  #loading .dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.2); } }
+</style>
+</head>
+<body>
+<div id="root"><div id="loading">BOOTING ALPHA TERMINAL <span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="env,react">
+
+const { useState, useEffect, useMemo, useCallback } = React;
+const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine } = Recharts;
+
+const _ico = (paths) => ({ size = 16, color = 'currentColor', style }) => React.createElement('svg', {
+  xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
+  fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+  style: { display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style },
+  dangerouslySetInnerHTML: { __html: paths }
+});
+const Plus = _ico('<path d="M5 12h14"/><path d="M12 5v14"/>');
+const Trash2 = _ico('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>');
+const Activity = _ico('<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.68 3.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4.44 13H2"/>');
+const Briefcase = _ico('<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>');
+const Users = _ico('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
+const Target = _ico('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
+const ChevronRight = _ico('<path d="m9 18 6-6-6-6"/>');
+const RefreshCw = _ico('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>');
+const Book = _ico('<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>');
+const AlertTriangle = _ico('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>');
+const Shield = _ico('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>');
+const Zap = _ico('<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>');
+const Rocket = _ico('<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>');
+const DollarSign = _ico('<line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>');
+
+
+// window.storage shim - wire to localStorage so the app persists in any browser
+if (!window.storage) {
+  window.storage = {
+    get: async (key) => {
+      const v = localStorage.getItem(key);
+      return v === null ? null : { value: v };
+    },
+    set: async (key, value) => {
+      localStorage.setItem(key, String(value));
+      return { value };
+    },
+  };
+}
+
+
+const MANAGERS = [
+  { id: 'buffett', name: 'Warren Buffett / Ted Weschler', firm: 'Berkshire Hathaway', aum: '$277B equity + $382B cash', philosophy: 'Quality businesses with durable moats, strong management, bought at sensible prices. Holding period: forever.', style: 'Value / Quality',
+    recentMoves: [
+      { action: 'ADD', ticker: 'CVX', note: 'Chevron — 39th consecutive dividend hike' },
+      { action: 'ADD', ticker: 'CB', note: 'Chubb — record 81.2% combined ratio' },
+      { action: 'ADD', ticker: 'DPZ', note: "Domino's — buying on weakness" },
+      { action: 'ADD', ticker: 'NYT', note: 'New York Times — subscription moat' },
+      { action: 'TRIM', ticker: 'AAPL', note: 'Sold ~10M shares, still top holding' },
+    ],
+    topHoldings: ['AAPL', 'AXP', 'BAC', 'KO', 'CVX', 'OXY', 'KHC', 'MCO', 'CB'], color: '#c9a961' },
+  { id: 'dalio', name: 'Ray Dalio', firm: 'Bridgewater Associates', aum: '$138B', philosophy: 'Global macro. "All Weather" diversification — balance risk across economic regimes using leverage to equalize.', style: 'Global Macro / Risk Parity',
+    recentMoves: [
+      { action: 'HOLD', ticker: 'GLD', note: 'Gold remains core diversifier' },
+      { action: 'ADD', ticker: 'IEMG', note: 'EM equities on dollar weakness' },
+      { action: 'ADD', ticker: 'TIP', note: 'TIPS for sticky inflation hedge' },
+    ],
+    topHoldings: ['SPY', 'IEMG', 'GLD', 'TIP', 'VWO', 'LQD', 'TLT'], color: '#4a90e2' },
+  { id: 'ackman', name: 'Bill Ackman', firm: 'Pershing Square', aum: '~$18B', philosophy: 'Concentrated activism. 8–12 positions in simple, predictable, free-cash-flow-generative businesses where he can drive change.', style: 'Activist / Concentrated',
+    recentMoves: [
+      { action: 'HOLD', ticker: 'CMG', note: 'Chipotle — long-term compounder' },
+      { action: 'HOLD', ticker: 'HLT', note: 'Hilton — asset-light moat' },
+      { action: 'NEW', ticker: 'UBER', note: 'Network effect + AV optionality' },
+    ],
+    topHoldings: ['CMG', 'HLT', 'QSR', 'UBER', 'GOOG', 'HHH', 'NKE'], color: '#e74c3c' },
+  { id: 'klarman', name: 'Seth Klarman', firm: 'Baupost Group', aum: '~$27B', philosophy: 'Margin of safety. Deep value + special situations. Rarely shorts, rarely uses leverage.', style: 'Deep Value / Special Situations',
+    recentMoves: [
+      { action: 'ADD', ticker: 'LBRDK', note: 'Liberty Broadband — discount to NAV' },
+      { action: 'NEW', ticker: 'WBD', note: 'Warner Bros — post-spin workout' },
+      { action: 'ADD', ticker: 'GOOG', note: 'Alphabet — quality at a price' },
+    ],
+    topHoldings: ['LBRDK', 'WBD', 'GOOG', 'META', 'FWONK'], color: '#2ecc71' },
+  { id: 'burry', name: 'Michael Burry', firm: 'Scion Asset Management', aum: '~$200M (small, high signal)', philosophy: 'Contrarian deep-value. Often heavily hedged. Tends to short bubbles and buy unloved cyclicals.', style: 'Contrarian / Hedged Value',
+    recentMoves: [
+      { action: 'HEDGE', ticker: 'PUTS', note: 'Reported puts on semiconductor complex' },
+      { action: 'NEW', ticker: 'BABA', note: 'China tech at distressed multiples' },
+      { action: 'NEW', ticker: 'JD', note: 'JD.com — value play on China' },
+    ],
+    topHoldings: ['BABA', 'JD', 'BIDU', 'EL'], color: '#9b59b6' },
+  { id: 'druckenmiller', name: 'Stanley Druckenmiller', firm: 'Duquesne Family Office', aum: '~$3.5B', philosophy: 'Concentrated macro bets. Top-down themes via equities, commodities, currencies. Ruthless about cutting losers.', style: 'Macro / Thematic',
+    recentMoves: [
+      { action: 'SOLD', ticker: 'NVDA', note: 'Exited entire Nvidia position in 2024–25' },
+      { action: 'ADD', ticker: 'GLD', note: 'Gold as fiat-debasement hedge' },
+      { action: 'ADD', ticker: 'TLT', note: 'Long-duration on recession risk' },
+    ],
+    topHoldings: ['GLD', 'TLT', 'NTRA', 'COHR', 'PM', 'TEVA'], color: '#e67e22' },
+  { id: 'marks', name: 'Howard Marks', firm: 'Oaktree Capital', aum: '$205B', philosophy: "Second-level thinking. You can't predict, you can prepare. Credit-focused — distressed debt, high yield.", style: 'Credit / Cycle-Aware',
+    recentMoves: [
+      { action: 'ADD', ticker: 'HYG', note: 'Selective HY on widening spreads' },
+      { action: 'ADD', ticker: 'BKLN', note: 'Floating-rate bank loans' },
+      { action: 'HOLD', ticker: 'EMB', note: 'EM sovereign credit' },
+    ],
+    topHoldings: ['HYG', 'BKLN', 'EMB', 'JNK', 'LQD'], color: '#34495e' },
+  { id: 'wood', name: 'Cathie Wood', firm: 'ARK Invest', aum: '~$15B', philosophy: 'Disruptive innovation. 5-year conviction on AI, robotics, genomics, blockchain. High-beta thematic ETFs.', style: 'Growth / Disruptive Innovation',
+    recentMoves: [
+      { action: 'ADD', ticker: 'TSLA', note: 'Tesla — robotaxi + humanoid thesis' },
+      { action: 'ADD', ticker: 'PLTR', note: 'Palantir — enterprise AI' },
+      { action: 'ADD', ticker: 'RBLX', note: 'Roblox — metaverse platform' },
+    ],
+    topHoldings: ['TSLA', 'COIN', 'PLTR', 'RBLX', 'PATH', 'CRSP', 'RKLB'], color: '#1abc9c' },
+  { id: 'loeb', name: 'Dan Loeb', firm: 'Third Point', aum: '~$11B', philosophy: 'Event-driven activism + opportunistic value. Pushes for breakups, spin-offs, management changes.', style: 'Event-Driven / Activist',
+    recentMoves: [
+      { action: 'NEW', ticker: 'DIS', note: 'Disney — push for streaming profitability' },
+      { action: 'ADD', ticker: 'META', note: 'Meta — AI capex discipline' },
+      { action: 'ADD', ticker: 'AMZN', note: 'Amazon — AWS margin story' },
+    ],
+    topHoldings: ['META', 'AMZN', 'DIS', 'BSX', 'TMUS', 'VST'], color: '#d35400' },
+  { id: 'miller', name: 'Bill Miller IV', firm: 'Miller Value Partners', aum: '~$2B', philosophy: 'Value investor who embraces tech. Owns "expensive" names if FCF and optionality justify. Bitcoin bull since 2014.', style: 'Value with Growth Lens',
+    recentMoves: [
+      { action: 'ADD', ticker: 'BTC', note: 'Bitcoin — digital gold thesis' },
+      { action: 'ADD', ticker: 'MSTR', note: 'MicroStrategy — leveraged BTC' },
+      { action: 'HOLD', ticker: 'AMZN', note: 'Amazon core position' },
+    ],
+    topHoldings: ['AMZN', 'MSTR', 'IBKR', 'GOOG', 'SOFI'], color: '#f39c12' },
+];
+
+const THEMES = [
+  { title: 'AI Infrastructure Buildout', thesis: 'Tech-related financing is the dominant 2026 theme. <20% of the $3T data-center capex has been deployed. "The micro is macro."', source: 'Morgan Stanley, BlackRock',
+    picks: [
+      { ticker: 'NVDA', name: 'Nvidia', type: 'Core AI compute', conviction: 'High' },
+      { ticker: 'TSM', name: 'TSMC', type: 'Foundry', conviction: 'High' },
+      { ticker: 'AVGO', name: 'Broadcom', type: 'Custom silicon', conviction: 'High' },
+      { ticker: 'VRT', name: 'Vertiv', type: 'Data center cooling', conviction: 'Med' },
+      { ticker: 'CEG', name: 'Constellation Energy', type: 'Nuclear power for AI', conviction: 'High' },
+    ] },
+  { title: 'Precious Metals & Debasement Hedge', thesis: 'Fed cutting. Real rates falling. Gold miners benefit from stable gold + lower real rates. Silver transitioning to store-of-value.', source: 'iShares, Fidelity, Druckenmiller',
+    picks: [
+      { ticker: 'GLD', name: 'Gold ETF', type: 'Physical gold', conviction: 'High' },
+      { ticker: 'GDX', name: 'Gold Miners ETF', type: 'Miner equities', conviction: 'High' },
+      { ticker: 'SLV', name: 'Silver ETF', type: 'Silver', conviction: 'Med' },
+      { ticker: 'NEM', name: 'Newmont', type: 'Large-cap miner', conviction: 'Med' },
+    ] },
+  { title: 'Energy Transition Metals', thesis: 'Copper: constrained supply, rising demand from renewables + AI data-center electrification. Uranium: nuclear renaissance for baseload AI power.', source: 'Fidelity, Seeking Alpha',
+    picks: [
+      { ticker: 'FCX', name: 'Freeport-McMoRan', type: 'Copper major', conviction: 'High' },
+      { ticker: 'COPX', name: 'Copper Miners ETF', type: 'Diversified copper', conviction: 'Med' },
+      { ticker: 'CCJ', name: 'Cameco', type: 'Uranium', conviction: 'High' },
+      { ticker: 'URA', name: 'Uranium ETF', type: 'Uranium basket', conviction: 'Med' },
+    ] },
+  { title: 'Value Rotation & Financials', thesis: 'Value forecast to deliver first double-digit earnings growth in years. Financials: steeper yield curve, M&A revival.', source: 'iShares, Morgan Stanley',
+    picks: [
+      { ticker: 'IVE', name: 'S&P 500 Value ETF', type: 'Broad value', conviction: 'Med' },
+      { ticker: 'XLF', name: 'Financials Sector', type: 'Banks / insurers', conviction: 'High' },
+      { ticker: 'GS', name: 'Goldman Sachs', type: 'M&A / capital markets', conviction: 'High' },
+      { ticker: 'JPM', name: 'JPMorgan', type: 'Best-in-class bank', conviction: 'High' },
+    ] },
+  { title: 'GLP-1 / Diabesity Ecosystem', thesis: 'Structural drug-class growth. Beyond Lilly & Novo: knock-on effects on food, retail, medical devices.', source: 'Morgan Stanley, Fidelity',
+    picks: [
+      { ticker: 'LLY', name: 'Eli Lilly', type: 'GLP-1 leader', conviction: 'High' },
+      { ticker: 'NVO', name: 'Novo Nordisk', type: 'GLP-1 originator', conviction: 'Med' },
+    ] },
+  { title: 'EM Equities on Dollar Weakness', thesis: 'AI theme broadened to China, Taiwan, South Korea. Depreciating dollar is a structural 2026 theme.', source: 'BlackRock, Bloomberg consensus',
+    picks: [
+      { ticker: 'EWT', name: 'Taiwan ETF', type: 'AI supply chain', conviction: 'High' },
+      { ticker: 'EWY', name: 'South Korea ETF', type: 'Memory / Samsung', conviction: 'Med' },
+      { ticker: 'IEMG', name: 'Core EM ETF', type: 'Diversified EM', conviction: 'Med' },
+    ] },
+];
+
+// Starter allocation profiles — weights must sum to 100
+const PROFILES = [
+  {
+    id: 'balanced',
+    name: 'Balanced',
+    subtitle: 'All-weather, Dalio logic',
+    description: 'Designed to weather different economic regimes. Equities for growth, gold for debasement, long duration for deflation, TIPS for inflation, EM for dollar weakness. Lower expected return, lower volatility.',
+    color: '#4a90e2',
+    targetBeta: '~0.7',
+    weights: [
+      { ticker: 'SPY', weight: 30, note: 'US broad market core' },
+      { ticker: 'IEMG', weight: 15, note: 'EM / dollar weakness hedge' },
+      { ticker: 'EWT', weight: 10, note: 'Taiwan / AI supply chain' },
+      { ticker: 'GLD', weight: 15, note: 'Gold — debasement hedge' },
+      { ticker: 'TIP', weight: 10, note: 'TIPS — sticky inflation' },
+      { ticker: 'TLT', weight: 10, note: 'Long duration — recession hedge' },
+      { ticker: 'LQD', weight: 5, note: 'IG credit — carry' },
+      { ticker: 'CASH', weight: 5, note: 'Dry powder' },
+    ],
+  },
+  {
+    id: 'quality',
+    name: 'Quality + Themes',
+    subtitle: 'Buffett-style core with 2026 tilts',
+    description: 'Large quality-core anchor with targeted exposures to the strongest 2026 consensus themes: AI infrastructure, precious metals, copper/uranium for AI electrification, GLP-1. Moderate risk.',
+    color: '#c9a961',
+    targetBeta: '~1.0',
+    weights: [
+      { ticker: 'SPY', weight: 25, note: 'US core' },
+      { ticker: 'JPM', weight: 8, note: 'Best-in-class bank' },
+      { ticker: 'CVX', weight: 7, note: 'Energy — Buffett pick' },
+      { ticker: 'KO', weight: 5, note: 'Staples compounder' },
+      { ticker: 'NVDA', weight: 10, note: 'AI compute leader' },
+      { ticker: 'AVGO', weight: 7, note: 'AI networking / custom silicon' },
+      { ticker: 'GLD', weight: 10, note: 'Gold' },
+      { ticker: 'GDX', weight: 5, note: 'Gold miners' },
+      { ticker: 'FCX', weight: 5, note: 'Copper / AI electrification' },
+      { ticker: 'CCJ', weight: 5, note: 'Uranium / nuclear for AI' },
+      { ticker: 'LLY', weight: 8, note: 'GLP-1 leader' },
+      { ticker: 'CASH', weight: 5, note: 'Dry powder' },
+    ],
+  },
+  {
+    id: 'thematic',
+    name: 'Thematic / Growth',
+    subtitle: 'High conviction, higher volatility',
+    description: 'Concentrated in 2026 innovation themes. AI infrastructure, disruptive growth, precious metals, EM tech. Higher expected return with a much wider range of outcomes. Only for money with a 5+ year horizon.',
+    color: '#1abc9c',
+    targetBeta: '~1.3',
+    weights: [
+      { ticker: 'NVDA', weight: 15, note: 'AI compute' },
+      { ticker: 'AVGO', weight: 10, note: 'Networking / custom silicon' },
+      { ticker: 'TSM', weight: 8, note: 'Foundry' },
+      { ticker: 'TSLA', weight: 8, note: 'Robotaxi + humanoid' },
+      { ticker: 'PLTR', weight: 7, note: 'Enterprise AI' },
+      { ticker: 'META', weight: 7, note: 'AI capex discipline' },
+      { ticker: 'GLD', weight: 10, note: 'Gold anchor' },
+      { ticker: 'FCX', weight: 5, note: 'Copper' },
+      { ticker: 'CCJ', weight: 5, note: 'Uranium' },
+      { ticker: 'EWT', weight: 10, note: 'Taiwan — AI supply' },
+      { ticker: 'IEMG', weight: 5, note: 'Diversified EM' },
+      { ticker: 'JPM', weight: 5, note: 'Financials tilt' },
+      { ticker: 'CASH', weight: 5, note: 'Dry powder' },
+    ],
+  },
+];
+
+const FALLBACK_PRICES = {
+  AAPL: 228.40, MSFT: 418.50, GOOG: 182.90, GOOGL: 181.20, AMZN: 215.60, META: 595.30, NVDA: 132.80,
+  TSLA: 342.10, AVGO: 1680.50, TSM: 198.40,
+  AXP: 295.60, BAC: 44.80, JPM: 252.30, GS: 628.40, CB: 290.50, MCO: 495.20,
+  KO: 65.80, KHC: 31.40, CVX: 168.50, OXY: 49.20, XOM: 118.40,
+  CMG: 58.30, HLT: 258.60, QSR: 72.10, UBER: 78.50, NKE: 68.90, DIS: 112.30,
+  DPZ: 418.20, NYT: 52.80, LLY: 824.60, NVO: 78.40, PLTR: 82.40, COIN: 275.30,
+  RBLX: 62.40, CRSP: 42.80, RKLB: 28.50, PATH: 13.20, MSTR: 378.50, IBKR: 194.30, SOFI: 14.80,
+  BABA: 118.40, JD: 42.30, BIDU: 92.50, EL: 78.20, LBRDK: 92.40, WBD: 11.80, FWONK: 94.20,
+  NTRA: 178.50, COHR: 92.30, PM: 148.60, TEVA: 20.40, BSX: 98.20, TMUS: 238.40, VST: 168.50,
+  FCX: 49.80, CCJ: 68.40, NEM: 58.30, CEG: 298.50, VRT: 132.40,
+  SPY: 612.30, IVV: 614.80, IVE: 198.40, XLF: 52.80, QQQ: 538.20,
+  GLD: 318.50, GDX: 58.20, SLV: 36.40, TLT: 92.80, TIP: 108.50,
+  HYG: 78.40, BKLN: 21.30, JNK: 94.20, LQD: 106.80, EMB: 88.40,
+  IEMG: 62.80, VWO: 48.20, EWT: 68.40, EWY: 72.30, COPX: 48.20, URA: 42.80,
+  HHH: 72.40,
+};
+
+const ETFS = new Set(['SPY','IVV','IVE','XLF','QQQ','GLD','GDX','SLV','TLT','TIP','HYG','BKLN','JNK','LQD','EMB','IEMG','VWO','EWT','EWY','COPX','URA','VOO','VTI']);
+
+const BETA = {
+  AAPL: 1.25, MSFT: 0.95, GOOG: 1.05, GOOGL: 1.05, AMZN: 1.30, META: 1.35, NVDA: 1.75, TSLA: 2.10, AVGO: 1.45, TSM: 1.15,
+  AXP: 1.20, BAC: 1.30, JPM: 1.15, GS: 1.40, CB: 0.75, MCO: 1.20,
+  KO: 0.60, KHC: 0.55, CVX: 0.95, OXY: 1.40, XOM: 0.90,
+  CMG: 1.10, HLT: 1.30, UBER: 1.25, NKE: 0.95, DIS: 1.15, DPZ: 0.80, NYT: 0.90,
+  LLY: 0.55, NVO: 0.50, PLTR: 2.50, COIN: 3.00, RBLX: 1.90, MSTR: 3.50,
+  BABA: 0.70, JD: 0.65,
+  SPY: 1.00, IVV: 1.00, IVE: 0.85, XLF: 1.15, QQQ: 1.15,
+  GLD: 0.15, GDX: 0.80, SLV: 0.40, TLT: -0.20, TIP: 0.10,
+  HYG: 0.55, BKLN: 0.35, LQD: 0.25,
+  IEMG: 0.85, EWT: 1.10, EWY: 1.15,
+  FCX: 1.55, CCJ: 1.30, CEG: 1.20,
+};
+
+const VOL = {
+  AAPL: 28, MSFT: 24, GOOG: 28, AMZN: 32, META: 36, NVDA: 48, TSLA: 58, AVGO: 38, TSM: 30,
+  JPM: 26, BAC: 30, GS: 32, CB: 20, MCO: 26, AXP: 28,
+  KO: 16, KHC: 22, CVX: 26, OXY: 42, XOM: 24,
+  UBER: 38, CMG: 30, HLT: 32, NKE: 28, DIS: 30,
+  LLY: 22, NVO: 24, PLTR: 62, COIN: 85, MSTR: 90, RBLX: 55,
+  BABA: 42, JD: 45,
+  SPY: 16, IVV: 16, XLF: 22, QQQ: 20,
+  GLD: 14, GDX: 30, SLV: 26, TLT: 14, TIP: 8,
+  HYG: 10, LQD: 8,
+  FCX: 42, CCJ: 45, CEG: 35,
+};
+
+const getFallbackPrice = (ticker) => FALLBACK_PRICES[ticker?.toUpperCase()] || 100;
+
+async function fetchLivePrice(ticker) {
+  const t = ticker.toUpperCase();
+  const endpoint = ETFS.has(t) ? 'etfs' : 'stocks';
+  try {
+    const res = await fetch(`https://stockprices.dev/api/${endpoint}/${t}`);
+    if (!res.ok) throw new Error('bad');
+    const data = await res.json();
+    if (data?.Price && typeof data.Price === 'number') {
+      return { price: data.Price, name: data.Name || t, change: data.ChangeAmount || 0, changePct: data.ChangePercentage || 0, live: true };
+    }
+    throw new Error('no price');
+  } catch (e) {
+    return { price: getFallbackPrice(t), name: t, change: 0, changePct: 0, live: false };
+  }
+}
+
+// Fetch USD/GBP rate, fallback ~0.79 (approx Apr 2026 level)
+async function fetchFxRate(base, quote) {
+  if (base === quote) return 1;
+  try {
+    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${base}&symbols=${quote}`);
+    if (!res.ok) throw new Error('bad');
+    const data = await res.json();
+    return data?.rates?.[quote] || (base === 'USD' && quote === 'GBP' ? 0.79 : 1 / 0.79);
+  } catch {
+    return base === 'USD' && quote === 'GBP' ? 0.79 : 1 / 0.79;
+  }
+}
+
+const CURRENCIES = {
+  USD: { symbol: '$', code: 'USD' },
+  GBP: { symbol: '£', code: 'GBP' },
+  EUR: { symbol: '€', code: 'EUR' },
+};
+
+const fmtMoney = (value, ccy = 'USD', digits = 0) => {
+  const sym = CURRENCIES[ccy]?.symbol || '$';
+  return `${sym}${value.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits === 0 ? 0 : 2 })}`;
+};
+
+const S = {
+  bg: '#0a0e14', bgAlt: '#0f1419', panel: '#131a22', panel2: '#1a232e',
+  border: '#1f2936', borderHot: '#2a3a4d',
+  text: '#e6edf3', textDim: '#7d8b9c', textFaint: '#4a5668',
+  green: '#26d07c', red: '#f85149', amber: '#ffa657', cyan: '#39c5cf', gold: '#c9a961',
+  mono: '"JetBrains Mono", "SF Mono", "Menlo", monospace',
+  display: '"Space Grotesk", -apple-system, sans-serif',
+};
+
+function PortfolioTerminal() {
+  const [tab, setTab] = useState('portfolio');
+  const [transactions, setTransactions] = useState([]);
+  const [quotes, setQuotes] = useState({});
+  const [benchmarkHistory, setBenchmarkHistory] = useState([]);
+  const [selectedManager, setSelectedManager] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [now, setNow] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
+  const [currency, setCurrency] = useState('USD');
+  const [fxRate, setFxRate] = useState(1); // USD -> currency
+
+  useEffect(() => {
+    fetchFxRate('USD', currency).then(setFxRate);
+  }, [currency]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try { const t = await window.storage.get('pt:transactions'); if (t) setTransactions(JSON.parse(t.value)); } catch (e) {}
+      try { const b = await window.storage.get('pt:benchmark'); if (b) setBenchmarkHistory(JSON.parse(b.value)); } catch (e) {}
+      try { const c = await window.storage.get('pt:currency'); if (c) setCurrency(c.value); } catch (e) {}
+      setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    window.storage.set('pt:transactions', JSON.stringify(transactions)).catch(() => {});
+  }, [transactions, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    window.storage.set('pt:benchmark', JSON.stringify(benchmarkHistory)).catch(() => {});
+  }, [benchmarkHistory, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    window.storage.set('pt:currency', currency).catch(() => {});
+  }, [currency, loaded]);
+
+  const { positions, cash, realizedPnl } = useMemo(() => {
+    const lots = {};
+    let cashBal = 0;
+    let realized = 0;
+    for (const tx of [...transactions].sort((a, b) => a.ts - b.ts)) {
+      if (tx.type === 'DEPOSIT') cashBal += tx.amount;
+      else if (tx.type === 'WITHDRAW') cashBal -= tx.amount;
+      else if (tx.type === 'BUY') {
+        if (!lots[tx.ticker]) lots[tx.ticker] = [];
+        lots[tx.ticker].push({ shares: tx.shares, price: tx.price });
+        cashBal -= tx.shares * tx.price;
+      } else if (tx.type === 'SELL') {
+        let remaining = tx.shares;
+        const queue = lots[tx.ticker] || [];
+        while (remaining > 0 && queue.length > 0) {
+          const lot = queue[0];
+          const take = Math.min(lot.shares, remaining);
+          realized += (tx.price - lot.price) * take;
+          lot.shares -= take;
+          remaining -= take;
+          if (lot.shares <= 0.0000001) queue.shift();
+        }
+        cashBal += tx.shares * tx.price;
+      }
+    }
+    const positions = Object.entries(lots).map(([ticker, queue]) => {
+      const shares = queue.reduce((s, l) => s + l.shares, 0);
+      if (shares <= 0.0000001) return null;
+      const cost = queue.reduce((s, l) => s + l.shares * l.price, 0);
+      return { ticker, shares, avgCost: cost / shares, cost };
+    }).filter(Boolean);
+    return { positions, cash: cashBal, realizedPnl: realized };
+  }, [transactions]);
+
+  const refreshQuotes = useCallback(async () => {
+    setRefreshing(true);
+    const tickers = new Set(positions.map(p => p.ticker));
+    tickers.add('SPY');
+    const updates = {};
+    await Promise.all([...tickers].map(async (t) => {
+      const q = await fetchLivePrice(t);
+      updates[t] = { ...q, ts: Date.now() };
+    }));
+    setQuotes(prev => ({ ...prev, ...updates }));
+    setRefreshing(false);
+    const portValue = positions.reduce((s, p) => s + (updates[p.ticker]?.price || 0) * p.shares, 0) + cash;
+    const spyPrice = updates.SPY?.price || 0;
+    if (portValue > 0 && spyPrice > 0) {
+      setBenchmarkHistory(prev => {
+        const last = prev[prev.length - 1];
+        if (last && Date.now() - last.ts < 30000) return prev;
+        return [...prev, { ts: Date.now(), portfolio: portValue, spy: spyPrice }].slice(-500);
+      });
+    }
+  }, [positions, cash]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    refreshQuotes();
+    const i = setInterval(refreshQuotes, 60000);
+    return () => clearInterval(i);
+  }, [loaded, positions.length]);
+
+  const enriched = useMemo(() => positions.map(p => {
+    const q = quotes[p.ticker];
+    const last = q?.price || getFallbackPrice(p.ticker);
+    const value = last * p.shares;
+    const pnl = value - p.cost;
+    const pnlPct = p.cost > 0 ? (pnl / p.cost) * 100 : 0;
+    return { ...p, last, value, pnl, pnlPct, change: q?.change || 0, changePct: q?.changePct || 0, live: q?.live || false };
+  }), [positions, quotes]);
+
+  const totalValue = enriched.reduce((s, p) => s + p.value, 0);
+  const totalCost = enriched.reduce((s, p) => s + p.cost, 0);
+  const unrealizedPnl = totalValue - totalCost;
+  const unrealizedPnlPct = totalCost > 0 ? (unrealizedPnl / totalCost) * 100 : 0;
+  const grandTotal = totalValue + cash;
+  const dayChange = enriched.reduce((s, p) => s + (p.change * p.shares), 0);
+
+  const addTx = (tx) => setTransactions(prev => [...prev, { ...tx, id: (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())), ts: tx.ts || Date.now() }]);
+  const removeTx = (id) => setTransactions(prev => prev.filter(t => t.id !== id));
+  const clearAll = () => { if (confirm('Clear all transactions? This cannot be undone.')) setTransactions([]); };
+
+  const quickBuy = async (ticker) => {
+    const q = await fetchLivePrice(ticker);
+    const sharesStr = prompt(`BUY ${ticker}\nCurrent: $${q.price.toFixed(2)}${q.live ? ' (live)' : ' (fallback)'}\n\nShares?`);
+    if (!sharesStr) return;
+    const priceStr = prompt(`Execution price?`, q.price.toFixed(2));
+    if (!priceStr) return;
+    const shares = parseFloat(sharesStr);
+    const price = parseFloat(priceStr);
+    if (shares > 0 && price > 0) addTx({ type: 'BUY', ticker: ticker.toUpperCase(), shares, price });
+  };
+
+  // Deploy a full allocation profile: deposit cash then generate BUYs
+  const deployAllocation = async (profile, amount, ccyCode, ccyRate) => {
+    // amount is in the selected currency; convert to USD for ticker pricing
+    const amountUsd = amount / ccyRate;
+    // Fetch live prices for all tickers in the profile in parallel
+    const tickers = profile.weights.filter(w => w.ticker !== 'CASH').map(w => w.ticker);
+    const priceMap = {};
+    await Promise.all(tickers.map(async t => {
+      const q = await fetchLivePrice(t);
+      priceMap[t] = q.price;
+    }));
+
+    const now = Date.now();
+    const newTxs = [];
+    // Single deposit (in USD terms internally — we store everything in USD to stay consistent with prices)
+    newTxs.push({ type: 'DEPOSIT', amount: amountUsd, ts: now, id: (crypto.randomUUID?.() || String(Math.random())) });
+
+    // One BUY per non-cash slice. Fractional shares (4 decimals).
+    let ts = now + 1;
+    for (const w of profile.weights) {
+      if (w.ticker === 'CASH') continue;
+      const slice = amountUsd * (w.weight / 100);
+      const price = priceMap[w.ticker] || getFallbackPrice(w.ticker);
+      const shares = Math.round((slice / price) * 10000) / 10000;
+      if (shares > 0) {
+        newTxs.push({ type: 'BUY', ticker: w.ticker, shares, price, ts: ts++, id: (crypto.randomUUID?.() || String(Math.random() + ts)) });
+      }
+    }
+    setTransactions(prev => [...prev, ...newTxs]);
+    setTab('portfolio');
+  };
+
+  const tabs = [
+    { k: 'portfolio', label: 'PORTFOLIO', icon: Briefcase },
+    { k: 'starter', label: 'STARTER', icon: Rocket },
+    { k: 'risk', label: 'RISK', icon: Shield },
+    { k: 'ledger', label: 'LEDGER', icon: Book },
+    { k: 'managers', label: 'SMART MONEY', icon: Users },
+    { k: 'ideas', label: 'IDEAS', icon: Target },
+    { k: 'research', label: 'RESEARCH', icon: Activity },
+  ];
+
+  return (
+    <div style={{ minHeight: '100vh', background: S.bg, color: S.text, fontFamily: S.mono, fontSize: '12px', letterSpacing: '0.02em' }}>
+      <div style={{ borderBottom: `1px solid ${S.border}`, background: `linear-gradient(180deg, ${S.bgAlt} 0%, ${S.bg} 100%)`, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '36px', height: '36px', background: `linear-gradient(135deg, ${S.gold} 0%, #8b6f2f 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: S.display, fontWeight: 700, fontSize: '18px', color: '#0a0e14' }}>A</div>
+          <div>
+            <div style={{ fontFamily: S.display, fontSize: '15px', fontWeight: 600, letterSpacing: '0.15em' }}>ALPHA TERMINAL</div>
+            <div style={{ fontSize: '10px', color: S.textDim, letterSpacing: '0.2em', marginTop: '2px' }}>PORTFOLIO · INTELLIGENCE · EXECUTION</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '11px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '2px' }}>
+            {['USD', 'GBP', 'EUR'].map(c => (
+              <button key={c} onClick={() => setCurrency(c)} style={{
+                padding: '5px 9px', background: currency === c ? S.gold : 'transparent',
+                color: currency === c ? '#0a0e14' : S.textDim,
+                border: `1px solid ${currency === c ? S.gold : S.border}`,
+                fontFamily: S.mono, fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
+              }}>{c}</button>
+            ))}
+          </div>
+          <div><span style={{ color: S.textDim }}>AUM </span><span style={{ color: S.gold, fontWeight: 600 }}>{fmtMoney(grandTotal * fxRate, currency)}</span></div>
+          <div><span style={{ color: S.textDim }}>DAY </span><span style={{ color: dayChange >= 0 ? S.green : S.red, fontWeight: 600 }}>{dayChange >= 0 ? '+' : ''}{fmtMoney(dayChange * fxRate, currency)}</span></div>
+          <div><span style={{ color: S.textDim }}>UNREAL </span><span style={{ color: unrealizedPnl >= 0 ? S.green : S.red, fontWeight: 600 }}>{unrealizedPnl >= 0 ? '+' : ''}{unrealizedPnlPct.toFixed(2)}%</span></div>
+          <button onClick={refreshQuotes} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${S.border}`, color: refreshing ? S.textFaint : S.cyan, padding: '6px 10px', fontFamily: S.mono, fontSize: '10px', letterSpacing: '0.15em', cursor: refreshing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={11} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            {refreshing ? 'SYNC' : 'REFRESH'}
+          </button>
+          <div style={{ color: S.textDim }}>{now.toLocaleTimeString('en-US', { hour12: false })}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: S.green, fontSize: '10px', letterSpacing: '0.2em' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.green, boxShadow: `0 0 8px ${S.green}` }} />LIVE
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', borderBottom: `1px solid ${S.border}`, background: S.bgAlt, overflowX: 'auto' }}>
+        {tabs.map(t => {
+          const Icon = t.icon;
+          const active = tab === t.k;
+          return (
+            <button key={t.k} onClick={() => setTab(t.k)} style={{
+              padding: '12px 20px', background: active ? S.panel : 'transparent', border: 'none',
+              borderBottom: active ? `2px solid ${S.gold}` : '2px solid transparent',
+              color: active ? S.text : S.textDim, fontFamily: S.mono, fontSize: '11px', fontWeight: active ? 600 : 400,
+              letterSpacing: '0.15em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+            }}>
+              <Icon size={13} />{t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', maxWidth: '1600px', margin: '0 auto' }}>
+        {tab === 'portfolio' && <PortfolioView enriched={enriched} cash={cash} totalValue={totalValue} unrealizedPnl={unrealizedPnl} unrealizedPnlPct={unrealizedPnlPct} realizedPnl={realizedPnl} grandTotal={grandTotal} dayChange={dayChange} addTx={addTx} currency={currency} fxRate={fxRate} />}
+        {tab === 'starter' && <StarterView deployAllocation={deployAllocation} currency={currency} fxRate={fxRate} hasPortfolio={transactions.length > 0} clearAll={clearAll} />}
+        {tab === 'risk' && <RiskView enriched={enriched} totalValue={totalValue} benchmarkHistory={benchmarkHistory} currency={currency} fxRate={fxRate} />}
+        {tab === 'ledger' && <LedgerView transactions={transactions} removeTx={removeTx} clearAll={clearAll} cash={cash} realizedPnl={realizedPnl} currency={currency} fxRate={fxRate} />}
+        {tab === 'managers' && <ManagersView selected={selectedManager} setSelected={setSelectedManager} quickBuy={quickBuy} />}
+        {tab === 'ideas' && <IdeasView quickBuy={quickBuy} quotes={quotes} currency={currency} fxRate={fxRate} />}
+        {tab === 'research' && <ResearchView />}
+      </div>
+
+      <div style={{ padding: '16px 20px', borderTop: `1px solid ${S.border}`, color: S.textFaint, fontSize: '10px', letterSpacing: '0.15em', textAlign: 'center' }}>
+        ALPHA TERMINAL · LIVE QUOTES VIA STOCKPRICES.DEV · 13F DATA Q4'25/Q1'26 · OUTLOOKS: BLACKROCK · MORGAN STANLEY · JPM · FIDELITY · ISHARES<br />
+        <span style={{ color: S.amber, marginTop: '6px', display: 'inline-block' }}>EDUCATIONAL USE ONLY · NOT INVESTMENT ADVICE · BETA/VOL ESTIMATES ARE ILLUSTRATIVE · DYOR</span>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function PortfolioView({ enriched, cash, totalValue, unrealizedPnl, unrealizedPnlPct, realizedPnl, grandTotal, dayChange, addTx, currency = 'USD', fxRate = 1 }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ type: 'BUY', ticker: '', shares: '', price: '', amount: '' });
+
+  const submit = () => {
+    if (form.type === 'BUY' || form.type === 'SELL') {
+      if (!form.ticker || !form.shares || !form.price) return;
+      addTx({ type: form.type, ticker: form.ticker.toUpperCase(), shares: parseFloat(form.shares), price: parseFloat(form.price) });
+    } else {
+      if (!form.amount) return;
+      addTx({ type: form.type, amount: parseFloat(form.amount) });
+    }
+    setForm({ type: 'BUY', ticker: '', shares: '', price: '', amount: '' });
+    setShowAdd(false);
+  };
+
+  const fetchPx = async () => {
+    if (!form.ticker) return;
+    const q = await fetchLivePrice(form.ticker);
+    setForm({ ...form, price: q.price.toFixed(2) });
+  };
+
+  const sectorMap = {
+    AAPL: 'Tech', MSFT: 'Tech', GOOG: 'Tech', GOOGL: 'Tech', AMZN: 'Tech', META: 'Tech', NVDA: 'Tech', AVGO: 'Tech', TSM: 'Tech', PLTR: 'Tech', TSLA: 'Tech', COIN: 'Tech', RBLX: 'Tech',
+    AXP: 'Financials', BAC: 'Financials', JPM: 'Financials', GS: 'Financials', CB: 'Financials', MCO: 'Financials', XLF: 'Financials', IBKR: 'Financials', SOFI: 'Financials',
+    KO: 'Staples', KHC: 'Staples', PM: 'Staples',
+    CVX: 'Energy', OXY: 'Energy', XOM: 'Energy',
+    LLY: 'Healthcare', NVO: 'Healthcare', CRSP: 'Healthcare', NTRA: 'Healthcare', BSX: 'Healthcare',
+    CMG: 'Cons Disc', HLT: 'Cons Disc', QSR: 'Cons Disc', UBER: 'Cons Disc', NKE: 'Cons Disc', DIS: 'Cons Disc', DPZ: 'Cons Disc',
+    GLD: 'Commodity', GDX: 'Commodity', SLV: 'Commodity', FCX: 'Commodity', CCJ: 'Commodity', NEM: 'Commodity', URA: 'Commodity', COPX: 'Commodity',
+    TLT: 'Fixed Inc', TIP: 'Fixed Inc', HYG: 'Fixed Inc', BKLN: 'Fixed Inc', JNK: 'Fixed Inc', LQD: 'Fixed Inc', EMB: 'Fixed Inc',
+    SPY: 'Index', IVV: 'Index', IVE: 'Index', QQQ: 'Index', IEMG: 'EM', VWO: 'EM', EWT: 'EM', EWY: 'EM',
+    CEG: 'Utilities', VST: 'Utilities',
+  };
+  const allocation = enriched.reduce((acc, p) => { const s = sectorMap[p.ticker] || 'Other'; acc[s] = (acc[s] || 0) + p.value; return acc; }, {});
+  if (cash > 0) allocation.Cash = cash;
+  const allocationData = Object.entries(allocation).map(([name, value]) => ({ name, value }));
+  const sectorColors = { Tech: '#39c5cf', Financials: '#4a90e2', Staples: '#c9a961', Energy: '#e67e22', Healthcare: '#2ecc71', 'Cons Disc': '#e74c3c', Commodity: '#d4af37', 'Fixed Inc': '#9b59b6', Index: '#7d8b9c', EM: '#f39c12', Utilities: '#1abc9c', Cash: '#26d07c', Other: '#4a5668' };
+
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+        <Kpi label="TOTAL AUM" value={fmtMoney(grandTotal * fxRate, currency)} accent={S.gold} />
+        <Kpi label="EQUITIES" value={fmtMoney(totalValue * fxRate, currency)} sub={`${enriched.length} positions`} />
+        <Kpi label="CASH" value={fmtMoney(cash * fxRate, currency)} sub={grandTotal > 0 ? `${((cash / grandTotal) * 100).toFixed(1)}% of AUM` : ''} />
+        <Kpi label="DAY P&L" value={`${dayChange >= 0 ? '+' : ''}${fmtMoney(dayChange * fxRate, currency)}`} accent={dayChange >= 0 ? S.green : S.red} />
+        <Kpi label="UNREALIZED" value={`${unrealizedPnl >= 0 ? '+' : ''}${fmtMoney(unrealizedPnl * fxRate, currency)}`} sub={`${unrealizedPnlPct >= 0 ? '+' : ''}${unrealizedPnlPct.toFixed(2)}%`} accent={unrealizedPnl >= 0 ? S.green : S.red} />
+        <Kpi label="REALIZED" value={`${realizedPnl >= 0 ? '+' : ''}${fmtMoney(realizedPnl * fxRate, currency)}`} accent={realizedPnl >= 0 ? S.green : S.red} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2.2fr) minmax(0, 1fr)', gap: '16px' }}>
+        <Panel title="HOLDINGS">
+          <div style={{ marginBottom: '12px' }}>
+            <button onClick={() => setShowAdd(!showAdd)} style={btnPrimary}><Plus size={12} /> NEW TRANSACTION</button>
+          </div>
+
+          {showAdd && (
+            <div style={{ marginBottom: '12px', padding: '12px', background: S.panel2, border: `1px solid ${S.borderHot}`, display: 'grid', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW'].map(t => (
+                  <button key={t} onClick={() => setForm({ ...form, type: t })} style={{
+                    flex: 1, padding: '6px 10px', fontFamily: S.mono, fontSize: '10px', letterSpacing: '0.15em', cursor: 'pointer',
+                    background: form.type === t ? (t === 'BUY' ? S.green : t === 'SELL' ? S.red : S.cyan) : 'transparent',
+                    color: form.type === t ? '#0a0e14' : S.textDim,
+                    border: `1px solid ${form.type === t ? 'transparent' : S.border}`, fontWeight: 600,
+                  }}>{t}</button>
+                ))}
+              </div>
+              {(form.type === 'BUY' || form.type === 'SELL') ? (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input placeholder="TICKER" value={form.ticker} onChange={e => setForm({ ...form, ticker: e.target.value.toUpperCase() })} style={inputStyle('110px')} />
+                  <input type="number" placeholder="shares" value={form.shares} onChange={e => setForm({ ...form, shares: e.target.value })} style={inputStyle('110px')} />
+                  <input type="number" placeholder="price $" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={inputStyle('120px')} />
+                  <button onClick={fetchPx} style={btnGhost} title="Fetch live price">MKT</button>
+                  <button onClick={submit} style={btnPrimary}>EXECUTE</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input type="number" placeholder="amount $" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} style={inputStyle('150px')} />
+                  <button onClick={submit} style={btnPrimary}>EXECUTE</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {enriched.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${S.border}`, color: S.textDim }}>
+                    <th style={th('left')}>TICKER</th>
+                    <th style={th('right')}>SHARES</th>
+                    <th style={th('right')}>AVG COST</th>
+                    <th style={th('right')}>LAST</th>
+                    <th style={th('right')}>DAY %</th>
+                    <th style={th('right')}>MKT VAL</th>
+                    <th style={th('right')}>P&L $</th>
+                    <th style={th('right')}>P&L %</th>
+                    <th style={th('right')}>WT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...enriched].sort((a, b) => b.value - a.value).map(p => (
+                    <tr key={p.ticker} style={{ borderBottom: `1px solid ${S.border}` }}>
+                      <td style={td('left')}>
+                        <span style={{ color: S.gold, fontWeight: 600 }}>{p.ticker}</span>
+                        {!p.live && <span style={{ marginLeft: '6px', fontSize: '8px', color: S.textFaint, letterSpacing: '0.1em' }}>FB</span>}
+                      </td>
+                      <td style={td('right')}>{p.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+                      <td style={td('right')}>${p.avgCost.toFixed(2)}</td>
+                      <td style={td('right')}>${p.last.toFixed(2)}</td>
+                      <td style={{ ...td('right'), color: p.changePct >= 0 ? S.green : S.red }}>
+                        {p.changePct >= 0 ? '+' : ''}{p.changePct.toFixed(2)}%
+                      </td>
+                      <td style={td('right')}>${p.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                      <td style={{ ...td('right'), color: p.pnl >= 0 ? S.green : S.red, fontWeight: 600 }}>
+                        {p.pnl >= 0 ? '+' : ''}${p.pnl.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      </td>
+                      <td style={{ ...td('right'), color: p.pnl >= 0 ? S.green : S.red }}>
+                        {p.pnlPct >= 0 ? '+' : ''}{p.pnlPct.toFixed(2)}%
+                      </td>
+                      <td style={td('right')}>{totalValue > 0 ? ((p.value / totalValue) * 100).toFixed(1) : 0}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="ALLOCATION">
+          {allocationData.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: S.textDim }}>No positions yet</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={allocationData} dataKey="value" innerRadius={55} outerRadius={90} stroke={S.bg} strokeWidth={2}>
+                    {allocationData.map((e, i) => <Cell key={i} fill={sectorColors[e.name] || '#4a5668'} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: S.bgAlt, border: `1px solid ${S.borderHot}`, fontSize: '11px', fontFamily: S.mono }} formatter={(v) => `$${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'grid', gap: '6px', marginTop: '8px' }}>
+                {[...allocationData].sort((a, b) => b.value - a.value).map(a => (
+                  <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', background: sectorColors[a.name] || '#4a5668' }} />
+                      <span style={{ color: S.text }}>{a.name}</span>
+                    </div>
+                    <span style={{ color: S.textDim }}>{((a.value / grandTotal) * 100).toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function RiskView({ enriched, totalValue, benchmarkHistory, currency = 'USD', fxRate = 1 }) {
+  const weightedBeta = totalValue > 0 ? enriched.reduce((s, p) => s + (BETA[p.ticker] ?? 1.0) * (p.value / totalValue), 0) : 0;
+  const weightedVol = totalValue > 0 ? (() => {
+    let variance = 0;
+    for (let i = 0; i < enriched.length; i++) {
+      const wi = enriched[i].value / totalValue;
+      const vi = (VOL[enriched[i].ticker] ?? 25) / 100;
+      for (let j = 0; j < enriched.length; j++) {
+        const wj = enriched[j].value / totalValue;
+        const vj = (VOL[enriched[j].ticker] ?? 25) / 100;
+        const corr = i === j ? 1.0 : 0.6;
+        variance += wi * wj * vi * vj * corr;
+      }
+    }
+    return Math.sqrt(variance) * 100;
+  })() : 0;
+
+  const hhi = totalValue > 0 ? enriched.reduce((s, p) => s + Math.pow((p.value / totalValue) * 100, 2), 0) : 0;
+  const maxWeight = totalValue > 0 && enriched.length > 0 ? Math.max(...enriched.map(p => (p.value / totalValue) * 100)) : 0;
+  const top5Weight = totalValue > 0 ? [...enriched].sort((a, b) => b.value - a.value).slice(0, 5).reduce((s, p) => s + (p.value / totalValue) * 100, 0) : 0;
+  const var95 = totalValue * (weightedVol / 100) * 1.645 / Math.sqrt(252);
+
+  const chartData = useMemo(() => {
+    if (benchmarkHistory.length < 1) return [];
+    const first = benchmarkHistory[0];
+    return benchmarkHistory.map(b => ({
+      time: new Date(b.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      Portfolio: (b.portfolio / first.portfolio) * 100,
+      SPY: (b.spy / first.spy) * 100,
+    }));
+  }, [benchmarkHistory]);
+
+  const portfolioReturn = chartData.length >= 2 ? chartData[chartData.length - 1].Portfolio - 100 : 0;
+  const spyReturn = chartData.length >= 2 ? chartData[chartData.length - 1].SPY - 100 : 0;
+  const alpha = portfolioReturn - spyReturn;
+
+  const contributors = [...enriched].sort((a, b) => b.pnl - a.pnl);
+  const riskLabel = hhi > 3000 ? 'HIGH' : hhi > 1800 ? 'ELEVATED' : hhi > 1000 ? 'MODERATE' : 'DIVERSIFIED';
+  const riskColor = hhi > 3000 ? S.red : hhi > 1800 ? S.amber : hhi > 1000 ? S.gold : S.green;
+
+  if (enriched.length === 0) return <Panel title="RISK & BENCHMARK"><EmptyState /></Panel>;
+
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+        <Kpi label="PORTFOLIO BETA" value={weightedBeta.toFixed(2)} sub="vs S&P 500" accent={weightedBeta > 1.3 ? S.red : weightedBeta > 1.1 ? S.amber : S.green} />
+        <Kpi label="EST. VOLATILITY" value={`${weightedVol.toFixed(1)}%`} sub="annualized" accent={weightedVol > 30 ? S.red : weightedVol > 20 ? S.amber : S.green} />
+        <Kpi label="1-DAY VaR (95%)" value={`$${var95.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} sub="parametric" accent={S.amber} />
+        <Kpi label="CONCENTRATION" value={riskLabel} sub={`HHI ${hhi.toFixed(0)}`} accent={riskColor} />
+        <Kpi label="TOP POSITION" value={`${maxWeight.toFixed(1)}%`} sub="single-name" accent={maxWeight > 20 ? S.red : maxWeight > 10 ? S.amber : S.green} />
+        <Kpi label="TOP 5 WEIGHT" value={`${top5Weight.toFixed(1)}%`} />
+      </div>
+
+      <Panel title="PERFORMANCE vs S&P 500 (SPY)">
+        {chartData.length < 2 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: S.textDim }}>
+            <Activity size={28} color={S.textFaint} style={{ margin: '0 auto 12px' }} />
+            <div>Benchmark tracking starts with your first refresh.</div>
+            <div style={{ color: S.textFaint, marginTop: '6px' }}>Updates every 60s automatically.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: '24px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <div><span style={{ color: S.textDim, fontSize: '10px', letterSpacing: '0.15em' }}>PORTFOLIO </span><span style={{ color: portfolioReturn >= 0 ? S.green : S.red, fontWeight: 600 }}>{portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(2)}%</span></div>
+              <div><span style={{ color: S.textDim, fontSize: '10px', letterSpacing: '0.15em' }}>SPY </span><span style={{ color: spyReturn >= 0 ? S.green : S.red, fontWeight: 600 }}>{spyReturn >= 0 ? '+' : ''}{spyReturn.toFixed(2)}%</span></div>
+              <div><span style={{ color: S.textDim, fontSize: '10px', letterSpacing: '0.15em' }}>ALPHA </span><span style={{ color: alpha >= 0 ? S.green : S.red, fontWeight: 600 }}>{alpha >= 0 ? '+' : ''}{alpha.toFixed(2)}%</span></div>
+              <div><span style={{ color: S.textDim, fontSize: '10px', letterSpacing: '0.15em' }}>SNAPSHOTS </span><span style={{ color: S.text }}>{benchmarkHistory.length}</span></div>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={chartData}>
+                <XAxis dataKey="time" stroke={S.textFaint} fontSize={10} />
+                <YAxis stroke={S.textFaint} fontSize={10} domain={['auto', 'auto']} tickFormatter={v => `${v.toFixed(1)}`} />
+                <Tooltip contentStyle={{ background: S.bgAlt, border: `1px solid ${S.borderHot}`, fontSize: '11px', fontFamily: S.mono }} formatter={v => `${v.toFixed(2)}`} />
+                <ReferenceLine y={100} stroke={S.textFaint} strokeDasharray="2 4" />
+                <Line type="monotone" dataKey="Portfolio" stroke={S.gold} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="SPY" stroke={S.cyan} strokeWidth={2} dot={false} strokeDasharray="4 2" />
+              </LineChart>
+            </ResponsiveContainer>
+          </>
+        )}
+      </Panel>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px' }}>
+        <Panel title="POSITION RISK CONTRIBUTIONS">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${S.border}`, color: S.textDim }}>
+                  <th style={th('left')}>TICKER</th>
+                  <th style={th('right')}>WT %</th>
+                  <th style={th('right')}>BETA</th>
+                  <th style={th('right')}>VOL %</th>
+                  <th style={th('right')}>β·WT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...enriched].sort((a, b) => b.value - a.value).map(p => {
+                  const w = (p.value / totalValue) * 100;
+                  const b = BETA[p.ticker] ?? 1.0;
+                  const v = VOL[p.ticker] ?? 25;
+                  return (
+                    <tr key={p.ticker} style={{ borderBottom: `1px solid ${S.border}` }}>
+                      <td style={td('left')}><span style={{ color: S.gold, fontWeight: 600 }}>{p.ticker}</span></td>
+                      <td style={td('right')}>{w.toFixed(1)}%</td>
+                      <td style={{ ...td('right'), color: b > 1.5 ? S.red : b > 1.0 ? S.amber : S.green }}>{b.toFixed(2)}</td>
+                      <td style={{ ...td('right'), color: v > 40 ? S.red : v > 25 ? S.amber : S.green }}>{v}%</td>
+                      <td style={td('right')}>{(b * w / 100).toFixed(3)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel title="P&L CONTRIBUTORS">
+          <div style={{ display: 'grid', gap: '6px' }}>
+            {contributors.slice(0, 8).map(p => {
+              const maxAbs = Math.max(...contributors.map(c => Math.abs(c.pnl)), 1);
+              const pct = (Math.abs(p.pnl) / maxAbs) * 100;
+              return (
+                <div key={p.ticker} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 100px', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+                  <span style={{ color: S.gold, fontWeight: 600 }}>{p.ticker}</span>
+                  <div style={{ height: '14px', background: S.panel2, position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: 0, [p.pnl >= 0 ? 'left' : 'right']: 0, width: `${pct}%`, height: '100%', background: p.pnl >= 0 ? S.green : S.red, opacity: 0.8 }} />
+                  </div>
+                  <span style={{ textAlign: 'right', color: p.pnl >= 0 ? S.green : S.red, fontWeight: 600 }}>
+                    {p.pnl >= 0 ? '+' : ''}${p.pnl.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      </div>
+
+      <Panel title="RISK FLAGS">
+        <div style={{ display: 'grid', gap: '8px' }}>
+          {maxWeight > 25 && <RiskFlag level="high" msg={`Single-name concentration: ${maxWeight.toFixed(1)}% in one position. Consider trimming.`} />}
+          {hhi > 3000 && <RiskFlag level="high" msg={`High concentration (HHI ${hhi.toFixed(0)}). Portfolio behaves like ${(10000 / hhi).toFixed(1)} effective names.`} />}
+          {weightedBeta > 1.4 && <RiskFlag level="med" msg={`Portfolio beta of ${weightedBeta.toFixed(2)} — ${((weightedBeta - 1) * 100).toFixed(0)}% more market sensitivity than SPY.`} />}
+          {weightedVol > 30 && <RiskFlag level="med" msg={`Estimated volatility ${weightedVol.toFixed(1)}% is high. 1-day 95% VaR ~$${var95.toLocaleString('en-US', { maximumFractionDigits: 0 })}.`} />}
+          {enriched.length < 8 && enriched.length > 0 && <RiskFlag level="low" msg={`Only ${enriched.length} positions. Diversification plateaus around 15-20 uncorrelated names.`} />}
+          {enriched.length >= 8 && hhi <= 1800 && weightedBeta <= 1.2 && <RiskFlag level="ok" msg="Portfolio looks reasonably diversified and not excessively levered." />}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function RiskFlag({ level, msg }) {
+  const cfg = {
+    high: { color: S.red, icon: AlertTriangle, label: 'HIGH' },
+    med: { color: S.amber, icon: AlertTriangle, label: 'MED' },
+    low: { color: S.gold, icon: Zap, label: 'INFO' },
+    ok: { color: S.green, icon: Shield, label: 'OK' },
+  }[level];
+  const Icon = cfg.icon;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: S.panel2, borderLeft: `2px solid ${cfg.color}` }}>
+      <Icon size={14} color={cfg.color} />
+      <span style={{ color: cfg.color, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', minWidth: '36px' }}>{cfg.label}</span>
+      <span style={{ color: S.text, fontSize: '11px' }}>{msg}</span>
+    </div>
+  );
+}
+
+function LedgerView({ transactions, removeTx, clearAll, cash, realizedPnl, currency = 'USD', fxRate = 1 }) {
+  const [filter, setFilter] = useState('ALL');
+  const sorted = [...transactions].sort((a, b) => b.ts - a.ts);
+  const filtered = filter === 'ALL' ? sorted : sorted.filter(t => t.type === filter);
+
+  const totalDeposits = transactions.filter(t => t.type === 'DEPOSIT').reduce((s, t) => s + t.amount, 0);
+  const totalBuys = transactions.filter(t => t.type === 'BUY').reduce((s, t) => s + t.shares * t.price, 0);
+  const totalSells = transactions.filter(t => t.type === 'SELL').reduce((s, t) => s + t.shares * t.price, 0);
+  const actionColor = { BUY: S.green, SELL: S.red, DEPOSIT: S.cyan, WITHDRAW: S.amber };
+
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+        <Kpi label="TOTAL TXNS" value={transactions.length} />
+        <Kpi label="DEPOSITS" value={`$${totalDeposits.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} accent={S.cyan} />
+        <Kpi label="DEPLOYED" value={`$${totalBuys.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+        <Kpi label="PROCEEDS" value={`$${totalSells.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+        <Kpi label="REALIZED P&L" value={`${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} accent={realizedPnl >= 0 ? S.green : S.red} />
+        <Kpi label="CASH" value={`$${cash.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} accent={S.gold} />
+      </div>
+
+      <Panel title="TRANSACTION LEDGER">
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          {['ALL', 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAW'].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: '6px 12px', fontFamily: S.mono, fontSize: '10px', letterSpacing: '0.15em', cursor: 'pointer',
+              background: filter === f ? S.panel2 : 'transparent',
+              color: filter === f ? S.gold : S.textDim,
+              border: `1px solid ${filter === f ? S.gold : S.border}`, fontWeight: 600,
+            }}>{f}</button>
+          ))}
+          <div style={{ flex: 1 }} />
+          {transactions.length > 0 && (
+            <button onClick={clearAll} style={{ ...btnGhost, color: S.red, borderColor: S.red }}>
+              <Trash2 size={11} /> CLEAR ALL
+            </button>
+          )}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: S.textDim, fontSize: '12px' }}>
+            {transactions.length === 0 ? 'No transactions yet. Go to Portfolio and add one.' : `No ${filter} transactions.`}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${S.border}`, color: S.textDim }}>
+                  <th style={th('left')}>TIMESTAMP</th>
+                  <th style={th('left')}>TYPE</th>
+                  <th style={th('left')}>TICKER</th>
+                  <th style={th('right')}>SHARES</th>
+                  <th style={th('right')}>PRICE</th>
+                  <th style={th('right')}>VALUE</th>
+                  <th style={th('right')}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(tx => {
+                  const value = tx.type === 'BUY' || tx.type === 'SELL' ? tx.shares * tx.price : tx.amount;
+                  return (
+                    <tr key={tx.id} style={{ borderBottom: `1px solid ${S.border}` }}>
+                      <td style={{ ...td('left'), color: S.textDim }}>{new Date(tx.ts).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td style={td('left')}>
+                        <span style={{ padding: '3px 8px', background: `${actionColor[tx.type]}20`, color: actionColor[tx.type], fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em' }}>{tx.type}</span>
+                      </td>
+                      <td style={td('left')}>{tx.ticker ? <span style={{ color: S.gold, fontWeight: 600 }}>{tx.ticker}</span> : <span style={{ color: S.textFaint }}>—</span>}</td>
+                      <td style={td('right')}>{tx.shares ? tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'}</td>
+                      <td style={td('right')}>{tx.price ? `$${tx.price.toFixed(2)}` : '—'}</td>
+                      <td style={{ ...td('right'), fontWeight: 600 }}>${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                      <td style={td('right')}>
+                        <button onClick={() => removeTx(tx.id)} style={{ background: 'transparent', border: 'none', color: S.textFaint, cursor: 'pointer', padding: '4px' }}>
+                          <Trash2 size={11} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function ManagersView({ selected, setSelected, quickBuy }) {
+  const mgr = selected ? MANAGERS.find(m => m.id === selected) : null;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: mgr ? '320px 1fr' : '1fr', gap: '16px' }}>
+      <Panel title="INVESTMENT MANAGERS">
+        <div style={{ display: 'grid', gap: '4px' }}>
+          {MANAGERS.map(m => (
+            <div key={m.id} onClick={() => setSelected(m.id)} style={{
+              padding: '12px', background: selected === m.id ? S.panel2 : 'transparent',
+              border: `1px solid ${selected === m.id ? m.color : S.border}`, borderLeft: `3px solid ${m.color}`,
+              cursor: 'pointer',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: S.text }}>{m.name}</div>
+                  <div style={{ fontSize: '10px', color: S.textDim, marginTop: '2px' }}>{m.firm}</div>
+                </div>
+                <ChevronRight size={14} color={S.textFaint} />
+              </div>
+              <div style={{ fontSize: '10px', color: m.color, marginTop: '6px', letterSpacing: '0.1em' }}>{m.style.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      {mgr && (
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <Panel title={`${mgr.name.toUpperCase()} — ${mgr.firm.toUpperCase()}`}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              <Field label="AUM" value={mgr.aum} />
+              <Field label="STYLE" value={mgr.style} color={mgr.color} />
+            </div>
+            <div style={{ padding: '14px', background: S.panel2, borderLeft: `3px solid ${mgr.color}`, fontSize: '12px', lineHeight: 1.7, color: S.text, fontStyle: 'italic' }}>
+              "{mgr.philosophy}"
+            </div>
+          </Panel>
+
+          <Panel title="RECENT MOVES (Q4'25 → Q1'26)">
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {mgr.recentMoves.map((move, i) => {
+                const c = { ADD: S.green, NEW: S.cyan, TRIM: S.amber, SOLD: S.red, HOLD: S.textDim, HEDGE: S.gold }[move.action] || S.textDim;
+                return (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '70px 90px 1fr auto', gap: '12px', alignItems: 'center', padding: '10px 12px', background: S.panel2, borderLeft: `2px solid ${c}`, fontSize: '11px' }}>
+                    <span style={{ color: c, fontWeight: 700, letterSpacing: '0.1em' }}>{move.action}</span>
+                    <span style={{ color: S.gold, fontWeight: 600 }}>{move.ticker}</span>
+                    <span style={{ color: S.textDim }}>{move.note}</span>
+                    {move.ticker !== 'PUTS' && move.ticker !== 'BTC' && (
+                      <button onClick={() => quickBuy(move.ticker)} style={btnMini}>BUY</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel title="TOP HOLDINGS">
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {mgr.topHoldings.map(t => (
+                <button key={t} onClick={() => quickBuy(t)} style={{
+                  padding: '6px 12px', background: S.panel2, border: `1px solid ${S.border}`,
+                  fontSize: '11px', color: S.gold, fontWeight: 600, cursor: 'pointer', fontFamily: S.mono,
+                }}>{t}</button>
+              ))}
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {!mgr && (
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: S.textDim, fontSize: '12px', letterSpacing: '0.1em' }}>
+          ← SELECT A MANAGER TO VIEW STRATEGY, RECENT MOVES, AND TOP HOLDINGS
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IdeasView({ quickBuy, quotes, currency = 'USD', fxRate = 1 }) {
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      <div style={{ padding: '16px 20px', background: `linear-gradient(90deg, ${S.panel} 0%, ${S.bgAlt} 100%)`, border: `1px solid ${S.borderHot}`, borderLeft: `3px solid ${S.gold}` }}>
+        <div style={{ fontSize: '11px', color: S.gold, letterSpacing: '0.2em', marginBottom: '6px' }}>2026 CONSENSUS FROM SELL-SIDE & BUY-SIDE OUTLOOKS</div>
+        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7 }}>
+          Six thematic baskets from BlackRock, Morgan Stanley, JP Morgan, Fidelity, iShares, and the Bloomberg consensus of 60+ institutional outlooks. Research starting points — not recommendations.
+        </div>
+      </div>
+
+      {THEMES.map((t, i) => (
+        <Panel key={i} title={t.title.toUpperCase()}>
+          <div style={{ padding: '12px', background: S.panel2, marginBottom: '12px', borderLeft: `2px solid ${S.cyan}`, fontSize: '12px', lineHeight: 1.7 }}>
+            <div style={{ color: S.text }}>{t.thesis}</div>
+            <div style={{ color: S.textFaint, fontSize: '10px', marginTop: '8px', letterSpacing: '0.1em' }}>SOURCE: {t.source.toUpperCase()}</div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${S.border}`, color: S.textDim }}>
+                  <th style={th('left')}>TICKER</th>
+                  <th style={th('left')}>NAME</th>
+                  <th style={th('left')}>EXPOSURE</th>
+                  <th style={th('left')}>CONVICTION</th>
+                  <th style={th('right')}>PRICE</th>
+                  <th style={th('right')}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {t.picks.map(p => {
+                  const q = quotes[p.ticker];
+                  const px = q?.price || getFallbackPrice(p.ticker);
+                  const convColor = { High: S.green, Med: S.amber, Low: S.textDim }[p.conviction];
+                  return (
+                    <tr key={p.ticker} style={{ borderBottom: `1px solid ${S.border}` }}>
+                      <td style={td('left')}><span style={{ color: S.gold, fontWeight: 600 }}>{p.ticker}</span></td>
+                      <td style={td('left')}>{p.name}</td>
+                      <td style={{ ...td('left'), color: S.textDim }}>{p.type}</td>
+                      <td style={td('left')}><span style={{ color: convColor, fontWeight: 600 }}>●</span> {p.conviction}</td>
+                      <td style={td('right')}>${px.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                      <td style={td('right')}><button onClick={() => quickBuy(p.ticker)} style={btnMini}>BUY</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      ))}
+    </div>
+  );
+}
+
+function ResearchView() {
+  const items = [
+    { when: 'Q1 2026', source: 'BlackRock Investment Institute', headline: 'Stay overweight U.S. stocks on broadening AI theme', body: 'AI transformation is now "the micro is macro." Fed rate cuts support risk appetite. Theme broadened to China, Taiwan, South Korea. Active management preferred as winners diverge.' },
+    { when: 'Q1 2026', source: 'Morgan Stanley Research', headline: 'Overweight equities, underweight commodities and cash', body: '$3T data-center capex, <20% deployed. 10Y Treasury expected to decline into midyear then rebound above 4% by year-end. US assets strongly preferred. USD weakens early, rebounds H2.' },
+    { when: 'Q1 2026', source: 'Fidelity 2026 Sector Outlook', headline: 'Copper, silver, GLP-1 knock-ons are the sector plays', body: 'Copper: constrained supply, rising demand from renewables + AI electrification. Silver transitioning to store-of-value. Gold cautious after large runup. Financials need stock-picking.' },
+    { when: 'Feb 2026', source: 'Berkshire Hathaway 13F (Q4 2025)', headline: 'Berkshire adds to CVX, CB, DPZ, NYT; trims AAPL', body: "Greg Abel now CEO, Ted Weschler runs investments. $382B in cash + T-bills. Chubb reported record 81.2% combined ratio. Domino's bought on weakness. NYT initiated as subscription-moat bet." },
+    { when: 'Jan 2026', source: 'Bloomberg Consensus', headline: 'AI is "the defining theme" — even bears stay neutral', body: 'JPMorgan: "The biggest risk is not having exposure." Fidelity: "disconnect between positive short-term and broader structural instability." Themes: global fragmentation, USD depreciation, Fed independence, AI capex.' },
+    { when: 'Jan 2026', source: 'iShares 2026 Investment Directions', headline: 'Value rotation + gold miners + financials', body: 'Value equities forecast to deliver first double-digit earnings growth in years. Gold miners benefit from stable gold + lower real rates. All 11 S&P sectors posted gains in 2025 — breadth is back.' },
+    { when: 'Q1 2026', source: 'JP Morgan Global Research', headline: '"FOBO" — Fear of Being Obsolete — drives 2026 capex', body: 'AI theme broadening: governments and companies racing to avoid obsolescence. Bullish corn, wheat, cotton, sugar. Bearish soybeans. No clear supply stress except livestock.' },
+    { when: 'Mar 2026', source: 'Market color', headline: 'Druckenmiller exits Nvidia, loads GLD and TLT', body: 'Stanley Druckenmiller sold his entire Nvidia position during 2024-25. Shifted toward gold and long-duration Treasuries. Signal: top-down macro pro sees better risk/reward outside the AI megacaps.' },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <div style={{ padding: '16px 20px', background: S.panel, border: `1px solid ${S.border}`, borderLeft: `3px solid ${S.cyan}` }}>
+        <div style={{ fontSize: '11px', color: S.cyan, letterSpacing: '0.2em', marginBottom: '6px' }}>RESEARCH FEED</div>
+        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7 }}>Curated signals from primary sources.</div>
+      </div>
+      {items.map((it, i) => (
+        <div key={i} style={{ padding: '16px', background: S.panel, border: `1px solid ${S.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: S.gold, letterSpacing: '0.15em' }}>{it.source.toUpperCase()}</div>
+            <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>{it.when.toUpperCase()}</div>
+          </div>
+          <div style={{ fontSize: '14px', color: S.text, fontWeight: 600, marginBottom: '8px' }}>{it.headline}</div>
+          <div style={{ fontSize: '12px', color: S.textDim, lineHeight: 1.7 }}>{it.body}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StarterView({ deployAllocation, currency, fxRate, hasPortfolio, clearAll }) {
+  const [selected, setSelected] = useState('balanced');
+  const [amount, setAmount] = useState(5000);
+  const [livePrices, setLivePrices] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+
+  const profile = PROFILES.find(p => p.id === selected);
+  const sym = CURRENCIES[currency]?.symbol || '$';
+
+  // Fetch live prices when profile changes
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const tickers = profile.weights.filter(w => w.ticker !== 'CASH').map(w => w.ticker);
+    Promise.all(tickers.map(async t => {
+      const q = await fetchLivePrice(t);
+      return [t, q];
+    })).then(results => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach(([t, q]) => { map[t] = q; });
+      setLivePrices(map);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [selected]);
+
+  // Computed slices in selected currency
+  const slices = profile.weights.map(w => {
+    const amountCcy = amount * (w.weight / 100);
+    const amountUsd = amountCcy / fxRate;
+    const q = livePrices[w.ticker];
+    const priceUsd = q?.price || (w.ticker === 'CASH' ? 1 : getFallbackPrice(w.ticker));
+    const shares = w.ticker === 'CASH' ? 0 : Math.round((amountUsd / priceUsd) * 10000) / 10000;
+    const live = q?.live || false;
+    return { ...w, amountCcy, amountUsd, priceUsd, shares, live };
+  });
+
+  const handleDeploy = async () => {
+    if (hasPortfolio) {
+      const ok = confirm(`You already have transactions. Deploying will ADD to your existing portfolio.\n\nTo start fresh, cancel and use "CLEAR ALL" in the Ledger first.\n\nContinue and add?`);
+      if (!ok) return;
+    }
+    setDeploying(true);
+    await deployAllocation(profile, amount, currency, fxRate);
+    setDeploying(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      {/* Hero / disclaimer */}
+      <div style={{
+        padding: '16px 20px',
+        background: `linear-gradient(90deg, ${S.panel} 0%, ${S.bgAlt} 100%)`,
+        border: `1px solid ${S.borderHot}`,
+        borderLeft: `3px solid ${S.gold}`,
+      }}>
+        <div style={{ fontSize: '11px', color: S.gold, letterSpacing: '0.2em', marginBottom: '6px' }}>
+          STARTER ALLOCATION
+        </div>
+        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7, marginBottom: '8px' }}>
+          Pick a profile, enter an amount, review the slices, then deploy. One DEPOSIT plus one BUY per line are added to your ledger with full audit trail. Fractional shares to 4 decimals.
+        </div>
+        <div style={{ fontSize: '11px', color: S.amber, lineHeight: 1.6 }}>
+          Educational tool — NOT investment advice. At small sizes, a UK tax wrapper (ISA) and fees matter more than the specific allocation. A simple global tracker (VWRL, FWRG) may beat any of these after costs. DYOR.
+        </div>
+      </div>
+
+      {/* Profile picker */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+        {PROFILES.map(p => {
+          const active = selected === p.id;
+          return (
+            <div key={p.id} onClick={() => setSelected(p.id)} style={{
+              padding: '16px',
+              background: active ? S.panel2 : S.panel,
+              border: `1px solid ${active ? p.color : S.border}`,
+              borderLeft: `3px solid ${p.color}`,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                <div style={{ fontFamily: S.display, fontSize: '15px', fontWeight: 600, color: S.text }}>{p.name}</div>
+                <div style={{ fontSize: '10px', color: p.color, letterSpacing: '0.1em', fontWeight: 600 }}>β {p.targetBeta}</div>
+              </div>
+              <div style={{ fontSize: '11px', color: p.color, marginBottom: '8px', letterSpacing: '0.05em' }}>{p.subtitle}</div>
+              <div style={{ fontSize: '11px', color: S.textDim, lineHeight: 1.6 }}>{p.description}</div>
+              {active && (
+                <div style={{ marginTop: '10px', fontSize: '9px', color: S.gold, letterSpacing: '0.2em', fontWeight: 700 }}>● SELECTED</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Amount input */}
+      <Panel title="DEPLOY AMOUNT">
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: S.textDim, fontSize: '11px' }}>Amount ({currency})</span>
+            <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${S.border}`, background: S.bg }}>
+              <span style={{ padding: '0 10px', color: S.gold, fontWeight: 600, fontSize: '14px' }}>{sym}</span>
+              <input
+                type="number"
+                value={amount}
+                onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                style={{ background: 'transparent', border: 'none', color: S.text, padding: '10px 12px 10px 0', fontFamily: S.mono, fontSize: '14px', width: '140px', outline: 'none', fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {[1000, 2500, 5000, 10000, 25000].map(v => (
+              <button key={v} onClick={() => setAmount(v)} style={{
+                padding: '8px 12px', background: amount === v ? S.panel2 : 'transparent',
+                color: amount === v ? S.gold : S.textDim,
+                border: `1px solid ${amount === v ? S.gold : S.border}`,
+                fontFamily: S.mono, fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', cursor: 'pointer',
+              }}>{sym}{v.toLocaleString()}</button>
+            ))}
+          </div>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>
+            USD EQUIVALENT: <span style={{ color: S.textDim }}>${(amount / fxRate).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Preview table */}
+      <Panel title={`PREVIEW — ${profile.name.toUpperCase()} @ ${sym}${amount.toLocaleString()}`}>
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: S.textDim, fontSize: '11px' }}>
+            <RefreshCw size={24} color={S.textFaint} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 10px' }} />
+            <div>FETCHING LIVE PRICES…</div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${S.border}`, color: S.textDim }}>
+                  <th style={th('left')}>TICKER</th>
+                  <th style={th('left')}>EXPOSURE</th>
+                  <th style={th('right')}>TARGET %</th>
+                  <th style={th('right')}>{currency} ALLOC</th>
+                  <th style={th('right')}>PRICE (USD)</th>
+                  <th style={th('right')}>SHARES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slices.map(s => (
+                  <tr key={s.ticker} style={{ borderBottom: `1px solid ${S.border}` }}>
+                    <td style={td('left')}>
+                      <span style={{ color: s.ticker === 'CASH' ? S.cyan : S.gold, fontWeight: 600 }}>{s.ticker}</span>
+                      {s.ticker !== 'CASH' && !s.live && <span style={{ marginLeft: '6px', fontSize: '8px', color: S.textFaint, letterSpacing: '0.1em' }}>FB</span>}
+                    </td>
+                    <td style={{ ...td('left'), color: S.textDim }}>{s.note}</td>
+                    <td style={td('right')}>{s.weight}%</td>
+                    <td style={{ ...td('right'), color: S.text, fontWeight: 600 }}>{fmtMoney(s.amountCcy, currency, 2)}</td>
+                    <td style={td('right')}>{s.ticker === 'CASH' ? '—' : `$${s.priceUsd.toFixed(2)}`}</td>
+                    <td style={{ ...td('right'), color: s.ticker === 'CASH' ? S.textFaint : S.text }}>
+                      {s.ticker === 'CASH' ? 'Held as cash' : s.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                    </td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: `2px solid ${S.borderHot}`, background: S.panel2 }}>
+                  <td style={{ ...td('left'), fontWeight: 700, color: S.gold }}>TOTAL</td>
+                  <td style={td('left')}></td>
+                  <td style={{ ...td('right'), fontWeight: 700 }}>100%</td>
+                  <td style={{ ...td('right'), fontWeight: 700, color: S.gold }}>{fmtMoney(amount, currency, 2)}</td>
+                  <td style={td('right')}></td>
+                  <td style={td('right')}></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button onClick={handleDeploy} disabled={loading || deploying || amount <= 0} style={{
+            background: (loading || deploying || amount <= 0) ? S.panel2 : profile.color,
+            color: (loading || deploying || amount <= 0) ? S.textFaint : '#0a0e14',
+            border: 'none', padding: '10px 20px', fontFamily: S.mono, fontSize: '11px',
+            fontWeight: 700, letterSpacing: '0.15em', cursor: (loading || deploying || amount <= 0) ? 'wait' : 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+          }}>
+            <Rocket size={13} />
+            {deploying ? 'DEPLOYING…' : `DEPLOY ${fmtMoney(amount, currency)} → ${profile.name.toUpperCase()}`}
+          </button>
+          {hasPortfolio && (
+            <button onClick={clearAll} style={{
+              background: 'transparent', color: S.red, border: `1px solid ${S.red}`,
+              padding: '10px 14px', fontFamily: S.mono, fontSize: '10px', fontWeight: 600,
+              letterSpacing: '0.15em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+            }}>
+              <Trash2 size={11} /> CLEAR EXISTING FIRST
+            </button>
+          )}
+          <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>
+            After deploy: jump to PORTFOLIO or LEDGER to review.
+          </div>
+        </div>
+      </Panel>
+
+      {/* Methodology */}
+      <Panel title="HOW THIS WORKS">
+        <div style={{ fontSize: '11px', color: S.textDim, lineHeight: 1.8 }}>
+          <div style={{ color: S.text, fontWeight: 600, marginBottom: '8px' }}>What happens on deploy</div>
+          <div>One DEPOSIT for the full amount (converted to USD internally — prices are in USD), then one BUY per ticker at the current live price with fractional shares. Everything shows up in your Ledger, timestamped, and feeds the Risk tab.</div>
+          <div style={{ color: S.text, fontWeight: 600, marginTop: '14px', marginBottom: '8px' }}>Currency</div>
+          <div>Switch currencies in the header. Positions are stored in USD, but AUM, P&L and this preview are rendered in your chosen currency at the latest FX rate (via Frankfurter API, with a ~0.79 USD/GBP fallback).</div>
+          <div style={{ color: S.text, fontWeight: 600, marginTop: '14px', marginBottom: '8px' }}>Profile logic</div>
+          <div>Weights are hardcoded — not optimized. They reflect the general shape of each style (all-weather / quality-core / thematic-growth) using the 2026 consensus themes and instruments from the IDEAS tab. Adjust manually after deploy if needed.</div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub, accent }) {
+  return (
+    <div style={{ padding: '14px 16px', background: S.panel, border: `1px solid ${S.border}`, borderTop: accent ? `2px solid ${accent}` : `1px solid ${S.border}` }}>
+      <div style={{ fontSize: '10px', color: S.textDim, letterSpacing: '0.2em', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize: '18px', fontWeight: 600, color: accent || S.text, fontFamily: S.mono }}>{value}</div>
+      {sub && <div style={{ fontSize: '10px', color: S.textDim, marginTop: '2px' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Panel({ title, children }) {
+  return (
+    <div style={{ background: S.panel, border: `1px solid ${S.border}` }}>
+      <div style={{ padding: '10px 16px', borderBottom: `1px solid ${S.border}`, fontSize: '10px', color: S.textDim, letterSpacing: '0.25em', background: S.bgAlt, fontWeight: 600 }}>{title}</div>
+      <div style={{ padding: '16px' }}>{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, value, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: '10px', color: S.textDim, letterSpacing: '0.15em', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: color || S.text, fontWeight: 600 }}>{value}</div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+      <Briefcase size={32} color={S.textFaint} style={{ margin: '0 auto 12px' }} />
+      <div style={{ color: S.textDim, fontSize: '12px', marginBottom: '8px' }}>NO POSITIONS YET</div>
+      <div style={{ color: S.textFaint, fontSize: '11px', lineHeight: 1.6, maxWidth: '400px', margin: '0 auto' }}>
+        Hit NEW TRANSACTION to deposit cash and buy your first position. Or jump to SMART MONEY / IDEAS and click any BUY button.
+      </div>
+    </div>
+  );
+}
+
+const th = (align) => ({ padding: '10px 8px', textAlign: align, fontSize: '10px', fontWeight: 600, letterSpacing: '0.15em', color: S.textDim });
+const td = (align) => ({ padding: '10px 8px', textAlign: align, color: S.text, fontFamily: S.mono });
+const inputStyle = (w) => ({ background: S.bg, border: `1px solid ${S.border}`, color: S.text, padding: '7px 10px', fontFamily: S.mono, fontSize: '11px', width: w, outline: 'none' });
+const btnPrimary = { background: S.gold, color: '#0a0e14', border: 'none', padding: '7px 14px', fontFamily: S.mono, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' };
+const btnGhost = { background: 'transparent', color: S.textDim, border: `1px solid ${S.border}`, padding: '7px 12px', fontFamily: S.mono, fontSize: '10px', fontWeight: 600, letterSpacing: '0.15em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' };
+const btnMini = { background: 'transparent', color: S.gold, border: `1px solid ${S.gold}`, padding: '4px 10px', fontFamily: S.mono, fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer' };
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  React.createElement(PortfolioTerminal)
+);
+
+</script>
+</body>
+</html>
