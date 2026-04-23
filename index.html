@@ -554,6 +554,7 @@ function PortfolioTerminal() {
     { k: 'managers', label: 'SMART MONEY', icon: Users },
     { k: 'ideas', label: 'IDEAS', icon: Target },
     { k: 'research', label: 'RESEARCH', icon: Activity },
+    { k: 'news', label: 'NEWS', icon: Activity },
   ];
 
   return (
@@ -616,6 +617,7 @@ function PortfolioTerminal() {
         {tab === 'managers' && <ManagersView selected={selectedManager} setSelected={setSelectedManager} quickBuy={quickBuy} />}
         {tab === 'ideas' && <IdeasView quickBuy={quickBuy} quotes={quotes} currency={currency} fxRate={fxRate} />}
         {tab === 'research' && <ResearchView />}
+        {tab === 'news' && <NewsView positions={enriched} />}
       </div>
 
       <div style={{ padding: '16px 20px', borderTop: `1px solid ${S.border}`, color: S.textFaint, fontSize: '10px', letterSpacing: '0.15em', textAlign: 'center' }}>
@@ -1177,33 +1179,85 @@ function IdeasView({ quickBuy, quotes, currency = 'USD', fxRate = 1 }) {
 }
 
 function ResearchView() {
+  const [expanded, setExpanded] = useState(null);
   const items = [
-    { when: 'Q1 2026', source: 'BlackRock Investment Institute', headline: 'Stay overweight U.S. stocks on broadening AI theme', body: 'AI transformation is now "the micro is macro." Fed rate cuts support risk appetite. Theme broadened to China, Taiwan, South Korea. Active management preferred as winners diverge.' },
-    { when: 'Q1 2026', source: 'Morgan Stanley Research', headline: 'Overweight equities, underweight commodities and cash', body: '$3T data-center capex, <20% deployed. 10Y Treasury expected to decline into midyear then rebound above 4% by year-end. US assets strongly preferred. USD weakens early, rebounds H2.' },
-    { when: 'Q1 2026', source: 'Fidelity 2026 Sector Outlook', headline: 'Copper, silver, GLP-1 knock-ons are the sector plays', body: 'Copper: constrained supply, rising demand from renewables + AI electrification. Silver transitioning to store-of-value. Gold cautious after large runup. Financials need stock-picking.' },
-    { when: 'Feb 2026', source: 'Berkshire Hathaway 13F (Q4 2025)', headline: 'Berkshire adds to CVX, CB, DPZ, NYT; trims AAPL', body: "Greg Abel now CEO, Ted Weschler runs investments. $382B in cash + T-bills. Chubb reported record 81.2% combined ratio. Domino's bought on weakness. NYT initiated as subscription-moat bet." },
-    { when: 'Jan 2026', source: 'Bloomberg Consensus', headline: 'AI is "the defining theme" — even bears stay neutral', body: 'JPMorgan: "The biggest risk is not having exposure." Fidelity: "disconnect between positive short-term and broader structural instability." Themes: global fragmentation, USD depreciation, Fed independence, AI capex.' },
-    { when: 'Jan 2026', source: 'iShares 2026 Investment Directions', headline: 'Value rotation + gold miners + financials', body: 'Value equities forecast to deliver first double-digit earnings growth in years. Gold miners benefit from stable gold + lower real rates. All 11 S&P sectors posted gains in 2025 — breadth is back.' },
-    { when: 'Q1 2026', source: 'JP Morgan Global Research', headline: '"FOBO" — Fear of Being Obsolete — drives 2026 capex', body: 'AI theme broadening: governments and companies racing to avoid obsolescence. Bullish corn, wheat, cotton, sugar. Bearish soybeans. No clear supply stress except livestock.' },
-    { when: 'Mar 2026', source: 'Market color', headline: 'Druckenmiller exits Nvidia, loads GLD and TLT', body: 'Stanley Druckenmiller sold his entire Nvidia position during 2024-25. Shifted toward gold and long-duration Treasuries. Signal: top-down macro pro sees better risk/reward outside the AI megacaps.' },
+    { when: 'Q1 2026', source: 'BlackRock Investment Institute', headline: 'Stay overweight U.S. stocks on broadening AI theme',
+      body: 'AI transformation is now "the micro is macro." Fed rate cuts support risk appetite. Theme broadened to China, Taiwan, South Korea. Active management preferred as winners diverge.',
+      detail: 'BlackRock argues the AI buildout is so large it has become a macro force in its own right — the scale of capex ($3T+ cumulative through 2030) ripples through power demand, industrial production, and credit markets. They favor US equities on earnings breadth and EM equities (Taiwan, Korea, China) as secondary AI beneficiaries. Key risk: if AI monetization disappoints vs capex, a sharp re-rating of the Mag7 names would drag the index. Position: broad US equity core, plus active tilts to industrials, power infrastructure, and select EM tech.',
+      tickers: ['SPY', 'QQQ', 'EWT', 'EWY', 'CEG', 'VRT'], url: 'https://www.blackrock.com/corporate/insights/blackrock-investment-institute/publications/outlook' },
+    { when: 'Q1 2026', source: 'Morgan Stanley Research', headline: 'Overweight equities, underweight commodities and cash',
+      body: '$3T data-center capex, <20% deployed. 10Y Treasury expected to decline into midyear then rebound above 4% by year-end. US assets strongly preferred. USD weakens early, rebounds H2.',
+      detail: 'Morgan Stanleys base case: equities > fixed income > cash > commodities, with a strong US preference. Tech-related financing will dominate credit issuance as hyperscalers fund data centers with debt. They see investment-grade spreads widening as issuance outpaces demand — a trading opportunity. Recommend equal-weight duration: rally into midyear, give it back by Q4 as growth reaccelerates. Gold and oil underweights are the controversial calls given the broader consensus.',
+      tickers: ['SPY', 'QQQ', 'TLT', 'LQD', 'XLF'], url: 'https://www.morganstanley.com/insights/articles/stock-market-investment-outlook-2026' },
+    { when: 'Q1 2026', source: 'Fidelity 2026 Sector Outlook', headline: 'Copper, silver, GLP-1 knock-ons are the sector plays',
+      body: 'Copper: constrained supply, rising demand from renewables + AI electrification. Silver transitioning to store-of-value. Gold cautious after large runup. Financials need stock-picking.',
+      detail: 'Fidelity takes a sector-by-sector view. Materials: copper supply is structurally constrained (few new mines in the pipeline, long lead times) while demand from grid buildout and data-center electrification rises. Silver getting a dual tailwind: monetary (debasement hedge) plus industrial (solar, electronics). Gold cautious after its runup but not bearish. Healthcare: GLP-1 economics spread beyond Lilly and Novo to food, retail, and medical devices. Financials: steeper curve and M&A rebound helps, but earnings dispersion is wide — index exposure underperforms stock-picking.',
+      tickers: ['FCX', 'COPX', 'SLV', 'GLD', 'LLY', 'NVO', 'XLF', 'JPM', 'GS'], url: 'https://www.fidelity.com/learning-center/trading-investing/sector-outlook-2026' },
+    { when: 'Feb 2026', source: 'Berkshire Hathaway 13F (Q4 2025)', headline: 'Berkshire adds to CVX, CB, DPZ, NYT; trims AAPL',
+      body: 'Greg Abel now CEO, Ted Weschler runs investments. $382B in cash + T-bills. Chubb record combined ratio. Dominos bought on weakness. NYT initiated as subscription-moat bet.',
+      detail: 'First 13F of the post-Buffett era, though Berkshire insists the investment philosophy is unchanged. Chevron got a meaningful add — 39th consecutive annual dividend hike, capital discipline in the majors. Chubb deepened — record 81.2% combined ratio is elite P&C underwriting, stock trades at 13x trailing. Dominos bought on weakness, one of few Berkshire names below entry. NYT initiation interesting — classic subscription moat at a sane multiple. Apple trim continues multi-year pattern; position is still top-3 by dollar value. Cash pile hit $382B — widely discussed as either defensive posture or just "nothing is cheap right now."',
+      tickers: ['BRK.B', 'AAPL', 'CVX', 'CB', 'DPZ', 'NYT', 'AXP', 'KO', 'BAC'], url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001067983&type=13F' },
+    { when: 'Jan 2026', source: 'Bloomberg Consensus', headline: 'AI is "the defining theme" — even bears stay neutral',
+      body: 'JPMorgan: "The biggest risk is not having exposure." Fidelity: "disconnect between positive short-term and broader structural instability." Themes: global fragmentation, USD depreciation, Fed independence, AI capex.',
+      detail: 'Bloomberg synthesized outlooks from 60+ institutions. The striking finding: even firms warning about a US recession (BCA Research) or structural instability (Fidelity) stayed neutral or overweight equities for 2026 — because nobody wants to be short AI. The tail risks dominating conversation: (1) AI monetization lagging capex, causing a sharp Mag7 correction; (2) USD depreciation as deficits run hot and Fed independence is questioned politically; (3) global fragmentation — tariffs, export controls, capital controls — raising corporate capex costs. Nobody is loudly bullish on bonds.',
+      tickers: ['SPY', 'QQQ', 'NVDA', 'GLD', 'EWT'], url: 'https://www.bloomberg.com/graphics/2026-investment-outlooks/' },
+    { when: 'Jan 2026', source: 'iShares 2026 Investment Directions', headline: 'Value rotation + gold miners + financials',
+      body: 'Value equities forecast to deliver first double-digit earnings growth in years. Gold miners benefit from stable gold + lower real rates. All 11 S&P sectors posted gains in 2025 — breadth is back.',
+      detail: 'iShares argues 2025s market breadth broadening (all 11 sectors up, Top 5 contributing only 29% of H2 return vs 45% average since 2020) is a regime signal. Value finally gets an earnings tailwind after years of underperformance. Gold miners are a higher-beta play on stable gold + falling real rates — they deliver operating leverage. Financials: every industry in the sector (banks, insurers, asset managers, exchanges) is forecast to grow EPS. Tactical rotation trade: rotate from growth concentration into value, miners, financials over 6-12 months.',
+      tickers: ['IVE', 'GDX', 'XLF', 'JPM', 'GS', 'CB'], url: 'https://www.ishares.com/us/insights/inside-the-market/2026-market-outlook-investment-directions' },
+    { when: 'Q1 2026', source: 'JP Morgan Global Research', headline: '"FOBO" — Fear of Being Obsolete — drives 2026 capex',
+      body: 'AI theme broadening: governments and companies racing to avoid obsolescence. Bullish corn, wheat, cotton, sugar. Bearish soybeans. No clear supply stress except livestock.',
+      detail: 'JPM coined "FOBO" to describe the capex dynamic: its not FOMO, its governments and incumbents terrified of being left behind technologically or geopolitically. This forces capex even when ROI is uncertain — think sovereign AI funds, tariff-driven onshoring, European rearmament. Commodities call: bullish grains (corn, wheat) on weather + export disruption, cotton and sugar on EM demand, bearish soybeans on South American supply. Livestock is the one area with genuine supply stress — herd rebuilding takes years. Agricultural stocks and ag-ETFs under-covered vs the AI/metals themes but offer diversification.',
+      tickers: ['CORN', 'WEAT', 'DBA', 'MOO', 'LEAN'], url: 'https://www.jpmorgan.com/insights/global-research/outlook/market-outlook' },
+    { when: 'Mar 2026', source: 'Market color', headline: 'Druckenmiller exits Nvidia, loads GLD and TLT',
+      body: 'Stanley Druckenmiller sold his entire Nvidia position during 2024-25. Shifted toward gold and long-duration Treasuries. Signal: top-down macro pro sees better risk/reward outside the AI megacaps.',
+      detail: 'Druckenmiller is famously quick to cut winners when the risk/reward shifts. Exiting all of NVDA is a pointed signal — not that hes bearish on AI, but that the risk/reward for Nvidia specifically at its market cap had deteriorated. Loading GLD suggests positioning for fiat debasement and geopolitical fragmentation. Loading TLT (20-year Treasuries) is the contrarian recession call — if growth rolls over, long duration rips. The two trades together express a regime change view: peak AI euphoria behind us, growth scare ahead, gold as the hedge for both inflation and fiat concerns.',
+      tickers: ['NVDA', 'GLD', 'GDX', 'TLT', 'TIP'], url: null },
   ];
 
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
       <div style={{ padding: '16px 20px', background: S.panel, border: `1px solid ${S.border}`, borderLeft: `3px solid ${S.cyan}` }}>
         <div style={{ fontSize: '11px', color: S.cyan, letterSpacing: '0.2em', marginBottom: '6px' }}>RESEARCH FEED</div>
-        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7 }}>Curated signals from primary sources.</div>
+        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7 }}>Curated signals from primary sources. Click any item to expand.</div>
       </div>
-      {items.map((it, i) => (
-        <div key={i} style={{ padding: '16px', background: S.panel, border: `1px solid ${S.border}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-            <div style={{ fontSize: '10px', color: S.gold, letterSpacing: '0.15em' }}>{it.source.toUpperCase()}</div>
-            <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>{it.when.toUpperCase()}</div>
+      {items.map((it, i) => {
+        const open = expanded === i;
+        return (
+          <div key={i} onClick={() => setExpanded(open ? null : i)} style={{
+            padding: '16px', background: S.panel, border: `1px solid ${open ? S.cyan : S.border}`,
+            borderLeft: open ? `3px solid ${S.cyan}` : `1px solid ${S.border}`,
+            cursor: 'pointer', transition: 'all 0.15s',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+              <div style={{ fontSize: '10px', color: S.gold, letterSpacing: '0.15em' }}>{it.source.toUpperCase()}</div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>{it.when.toUpperCase()}</div>
+                <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.1em' }}>{open ? '▲' : '▼'}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '14px', color: S.text, fontWeight: 600, marginBottom: '8px' }}>{it.headline}</div>
+            <div style={{ fontSize: '12px', color: S.textDim, lineHeight: 1.7 }}>{it.body}</div>
+            {open && (
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: `1px solid ${S.border}` }}>
+                <div style={{ fontSize: '10px', color: S.cyan, letterSpacing: '0.15em', marginBottom: '8px' }}>EXTENDED ANALYSIS</div>
+                <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7, marginBottom: '14px' }}>{it.detail}</div>
+                <div style={{ fontSize: '10px', color: S.textDim, letterSpacing: '0.15em', marginBottom: '6px' }}>RELATED TICKERS</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  {it.tickers.map(t => (
+                    <span key={t} style={{ padding: '4px 10px', background: S.panel2, border: `1px solid ${S.border}`, fontSize: '10px', color: S.gold, fontWeight: 600, letterSpacing: '0.05em' }}>{t}</span>
+                  ))}
+                </div>
+                {it.url && (
+                  <a href={it.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: '11px', color: S.cyan, textDecoration: 'none', letterSpacing: '0.05em' }}>
+                    READ ORIGINAL SOURCE →
+                  </a>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: '14px', color: S.text, fontWeight: 600, marginBottom: '8px' }}>{it.headline}</div>
-          <div style={{ fontSize: '12px', color: S.textDim, lineHeight: 1.7 }}>{it.body}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1422,6 +1476,204 @@ function StarterView({ deployAllocation, currency, fxRate, hasPortfolio, clearAl
           <div>Weights are hardcoded — not optimized. They reflect the general shape of each style (all-weather / quality-core / thematic-growth) using the 2026 consensus themes and instruments from the IDEAS tab. Adjust manually after deploy if needed.</div>
         </div>
       </Panel>
+    </div>
+  );
+}
+
+function NewsView({ positions }) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all'); // 'all' | 'portfolio' | 'themes' | ticker
+  const [selected, setSelected] = useState(null);
+
+  // Ticker sources: portfolio holdings + a baseline set of widely-held / theme names
+  const portfolioTickers = useMemo(() => positions.map(p => p.ticker), [positions]);
+  const themeTickers = ['SPY', 'QQQ', 'NVDA', 'TSLA', 'AAPL', 'MSFT', 'GOOG', 'GLD', 'BTC-USD'];
+  const marketFeed = '^GSPC'; // S&P 500 index — general market news
+
+  const proxies = [
+    (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+
+  const fetchRss = async (rssUrl) => {
+    for (const makeUrl of proxies) {
+      try {
+        const res = await fetch(makeUrl(rssUrl));
+        if (!res.ok) continue;
+        const text = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/xml');
+        const parseError = doc.querySelector('parsererror');
+        if (parseError) continue;
+        const items = [...doc.querySelectorAll('item')].map(item => ({
+          title: item.querySelector('title')?.textContent || '',
+          link: item.querySelector('link')?.textContent || '',
+          description: (item.querySelector('description')?.textContent || '').replace(/<[^>]*>/g, '').slice(0, 400),
+          pubDate: item.querySelector('pubDate')?.textContent || '',
+          guid: item.querySelector('guid')?.textContent || item.querySelector('link')?.textContent || Math.random(),
+        }));
+        return items;
+      } catch (e) { /* try next */ }
+    }
+    return null;
+  };
+
+  const loadNews = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Build list of tickers to query based on filter
+      let tickers = [];
+      if (filter === 'portfolio' && portfolioTickers.length) tickers = portfolioTickers.slice(0, 8);
+      else if (filter === 'themes') tickers = themeTickers;
+      else if (filter === 'all') tickers = [marketFeed, ...(portfolioTickers.length ? portfolioTickers.slice(0, 4) : themeTickers.slice(0, 4))];
+      else tickers = [filter]; // single ticker
+
+      const results = await Promise.all(tickers.map(async (t) => {
+        const url = `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(t)}&region=US&lang=en-US`;
+        const items = await fetchRss(url);
+        return items ? items.map(it => ({ ...it, ticker: t })) : [];
+      }));
+
+      // Flatten, dedupe by link, sort by pubDate
+      const seen = new Set();
+      const all = [];
+      for (const group of results) {
+        for (const item of group) {
+          if (!seen.has(item.link)) {
+            seen.add(item.link);
+            all.push(item);
+          }
+        }
+      }
+      all.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      setArticles(all.slice(0, 80));
+      if (all.length === 0) setError('No articles returned. RSS feeds or proxies may be rate-limited.');
+    } catch (e) {
+      setError('Failed to load news: ' + e.message);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadNews(); /* eslint-disable-next-line */ }, [filter]);
+
+  // Friendly relative time
+  const fmtTime = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  };
+
+  const allFilters = [
+    { k: 'all', label: 'ALL' },
+    { k: 'portfolio', label: `MY PORTFOLIO (${portfolioTickers.length})`, disabled: portfolioTickers.length === 0 },
+    { k: 'themes', label: 'THEMES' },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: '16px' }}>
+      <div style={{ padding: '16px 20px', background: `linear-gradient(90deg, ${S.panel} 0%, ${S.bgAlt} 100%)`, border: `1px solid ${S.borderHot}`, borderLeft: `3px solid ${S.cyan}` }}>
+        <div style={{ fontSize: '11px', color: S.cyan, letterSpacing: '0.2em', marginBottom: '6px' }}>NEWS INTELLIGENCE</div>
+        <div style={{ fontSize: '12px', color: S.text, lineHeight: 1.7 }}>
+          Live headlines from Yahoo Finance, routed via CORS proxy. Filter by your portfolio holdings, market themes, or individual tickers. Click any headline to read the full article at the source.
+        </div>
+      </div>
+
+      <Panel title="FILTER">
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {allFilters.map(f => (
+            <button key={f.k} onClick={() => !f.disabled && setFilter(f.k)} disabled={f.disabled} style={{
+              padding: '7px 14px',
+              background: filter === f.k ? S.cyan : 'transparent',
+              color: filter === f.k ? '#0a0e14' : (f.disabled ? S.textFaint : S.textDim),
+              border: `1px solid ${filter === f.k ? S.cyan : S.border}`,
+              fontFamily: S.mono, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em',
+              cursor: f.disabled ? 'not-allowed' : 'pointer', opacity: f.disabled ? 0.4 : 1,
+            }}>{f.label}</button>
+          ))}
+          {portfolioTickers.length > 0 && (
+            <>
+              <div style={{ width: '1px', height: '20px', background: S.border, margin: '0 4px' }} />
+              {portfolioTickers.slice(0, 10).map(t => (
+                <button key={t} onClick={() => setFilter(t)} style={{
+                  padding: '7px 12px',
+                  background: filter === t ? S.gold : 'transparent',
+                  color: filter === t ? '#0a0e14' : S.gold,
+                  border: `1px solid ${S.gold}`,
+                  fontFamily: S.mono, fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
+                }}>{t}</button>
+              ))}
+            </>
+          )}
+          <div style={{ flex: 1 }} />
+          <button onClick={loadNews} disabled={loading} style={{
+            padding: '7px 14px', background: 'transparent', color: loading ? S.textFaint : S.cyan,
+            border: `1px solid ${S.border}`, fontFamily: S.mono, fontSize: '10px', fontWeight: 600,
+            letterSpacing: '0.15em', cursor: loading ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+          }}>
+            <RefreshCw size={11} style={{ display: 'inline-block', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            {loading ? 'LOADING' : 'REFRESH'}
+          </button>
+        </div>
+      </Panel>
+
+      {loading && articles.length === 0 && (
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: S.textDim, fontSize: '12px', letterSpacing: '0.15em' }}>
+          <RefreshCw size={24} color={S.textFaint} style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
+          <div>FETCHING HEADLINES…</div>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div style={{ padding: '16px 20px', background: S.panel, border: `1px solid ${S.amber}`, borderLeft: `3px solid ${S.amber}`, fontSize: '11px', color: S.amber, letterSpacing: '0.05em' }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && articles.length > 0 && (
+        <div style={{ display: 'grid', gap: '8px' }}>
+          {articles.map(a => {
+            const open = selected === a.guid;
+            return (
+              <div key={a.guid} onClick={() => setSelected(open ? null : a.guid)} style={{
+                padding: '14px 16px', background: S.panel,
+                border: `1px solid ${open ? S.cyan : S.border}`,
+                borderLeft: open ? `3px solid ${S.cyan}` : `1px solid ${S.border}`,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '10px', color: S.gold, letterSpacing: '0.15em', fontWeight: 600 }}>{a.ticker === '^GSPC' ? 'MARKET' : a.ticker}</div>
+                  <div style={{ fontSize: '10px', color: S.textFaint, letterSpacing: '0.05em' }}>{fmtTime(a.pubDate)}</div>
+                </div>
+                <div style={{ fontSize: '13px', color: S.text, fontWeight: 600, lineHeight: 1.5, marginBottom: open ? '10px' : 0 }}>{a.title}</div>
+                {open && (
+                  <>
+                    {a.description && (
+                      <div style={{ fontSize: '11px', color: S.textDim, lineHeight: 1.7, marginBottom: '10px' }}>{a.description}{a.description.length >= 390 ? '…' : ''}</div>
+                    )}
+                    <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: '10px', color: S.cyan, textDecoration: 'none', letterSpacing: '0.1em', fontWeight: 600 }}>
+                      READ FULL ARTICLE →
+                    </a>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && articles.length === 0 && !error && (
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: S.textDim, fontSize: '12px' }}>
+          No articles yet. Try REFRESH.
+        </div>
+      )}
     </div>
   );
 }
