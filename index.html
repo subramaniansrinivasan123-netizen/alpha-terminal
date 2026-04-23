@@ -309,13 +309,20 @@ const getFallbackPrice = (ticker) => FALLBACK_PRICES[ticker?.toUpperCase()] || 1
 
 async function fetchLivePrice(ticker) {
   const t = ticker.toUpperCase();
-  const endpoint = ETFS.has(t) ? 'etfs' : 'stocks';
+  // Try Yahoo Finance via a CORS-friendly proxy
   try {
-    const res = await fetch(`https://stockprices.dev/api/${endpoint}/${t}`);
-    if (!res.ok) throw new Error('bad');
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`;
+    const proxied = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxied);
+    if (!res.ok) throw new Error('yahoo bad');
     const data = await res.json();
-    if (data?.Price && typeof data.Price === 'number') {
-      return { price: data.Price, name: data.Name || t, change: data.ChangeAmount || 0, changePct: data.ChangePercentage || 0, live: true };
+    const r = data?.chart?.result?.[0];
+    const price = r?.meta?.regularMarketPrice;
+    const prevClose = r?.meta?.chartPreviousClose || r?.meta?.previousClose;
+    if (typeof price === 'number') {
+      const change = prevClose ? price - prevClose : 0;
+      const changePct = prevClose ? (change / prevClose) * 100 : 0;
+      return { price, name: r?.meta?.symbol || t, change, changePct, live: true };
     }
     throw new Error('no price');
   } catch (e) {
